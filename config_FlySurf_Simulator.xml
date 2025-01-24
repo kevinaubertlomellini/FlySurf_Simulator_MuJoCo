@@ -1,0 +1,274 @@
+<mujoco model="Skydio X2">
+  <compiler autolimits="true" assetdir="assets"/>
+
+  <option timestep="0.01" density="1.225" viscosity="1.8e-5"/>
+  <default>
+    <default class="ball">
+        <geom size="0.005" mass="0.001"/>
+    </default>
+    <default class="x2">
+      <geom mass="0"/>
+      <motor ctrlrange="0 13"/>
+      <default class="visual">
+        <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+      </default>
+      <default class="collision">
+        <geom group="3" type="box"/>
+      </default>
+      <site group="5"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture type="2d" file="X2_lowpoly_texture_SpinningProps_1024.png"/>
+    <material name="phong3SG" texture="X2_lowpoly_texture_SpinningProps_1024"/>
+    <material name="invisible" rgba="0 0 0 0"/>
+    <mesh class="x2" file="X2_lowpoly.obj" scale="0.0015 0.0015 0.0015"/>
+  </asset>
+
+  <worldbody>
+
+
+    <body name="quad_1" pos="-0.5000 -0.5000 0.05" childclass="x2">
+        <joint type="free" damping="0.06"/>
+        <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
+        <geom class="collision" size=".0075 .00405 .003" pos="-.0105 0 .00975"/>
+        <geom class="collision" size=".00345 .00255 .0015" pos="-.02055 .0012 .00975" quat="1 0 0 1"/>
+        <geom name="point_mass_1" type="sphere" size="0.012" pos="0 0 0" mass="0.032" material="invisible"/>
+        <site name="ball_1_1" pos="0 0 0"/>
+    </body>
+    
+
+    <body pos="0.0000 -0.5000 0.02">
+        <joint type="free" damping="0.06"/> 
+        <geom class="ball"/>
+        <site name="ball_1_2" pos="0 0 0"/>
+    </body>
+    
+
+    <body name="quad_2" pos="0.5000 -0.5000 0.05" childclass="x2">
+        <joint type="free" damping="0.06"/>
+        <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
+        <geom class="collision" size=".0075 .00405 .003" pos="-.0105 0 .00975"/>
+        <geom class="collision" size=".00345 .00255 .0015" pos="-.02055 .0012 .00975" quat="1 0 0 1"/>
+        <geom name="point_mass_2" type="sphere" size="0.012" pos="0 0 0" mass="0.032" material="invisible"/>
+        <site name="ball_1_3" pos="0 0 0"/>
+    </body>
+    
+
+    <body pos="-0.5000 0.0000 0.02">
+        <joint type="free" damping="0.06"/> 
+        <geom class="ball"/>
+        <site name="ball_2_1" pos="0 0 0"/>
+    </body>
+    
+
+    <body name="quad_3" pos="0.0000 0.0000 0.05" childclass="x2">
+        <joint type="free" damping="0.06"/>
+        <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
+        <geom class="collision" size=".0075 .00405 .003" pos="-.0105 0 .00975"/>
+        <geom class="collision" size=".00345 .00255 .0015" pos="-.02055 .0012 .00975" quat="1 0 0 1"/>
+        <geom name="point_mass_3" type="sphere" size="0.012" pos="0 0 0" mass="0.032" material="invisible"/>
+        <site name="ball_2_2" pos="0 0 0"/>
+    </body>
+    
+
+    <body pos="0.5000 0.0000 0.02">
+        <joint type="free" damping="0.06"/> 
+        <geom class="ball"/>
+        <site name="ball_2_3" pos="0 0 0"/>
+    </body>
+    
+
+    <body name="quad_4" pos="-0.5000 0.5000 0.05" childclass="x2">
+        <joint type="free" damping="0.06"/>
+        <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
+        <geom class="collision" size=".0075 .00405 .003" pos="-.0105 0 .00975"/>
+        <geom class="collision" size=".00345 .00255 .0015" pos="-.02055 .0012 .00975" quat="1 0 0 1"/>
+        <geom name="point_mass_4" type="sphere" size="0.012" pos="0 0 0" mass="0.032" material="invisible"/>
+        <site name="ball_3_1" pos="0 0 0"/>
+    </body>
+    
+
+    <body pos="0.0000 0.5000 0.02">
+        <joint type="free" damping="0.06"/> 
+        <geom class="ball"/>
+        <site name="ball_3_2" pos="0 0 0"/>
+    </body>
+    
+
+    <body name="quad_5" pos="0.5000 0.5000 0.05" childclass="x2">
+        <joint type="free" damping="0.06"/>
+        <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
+        <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
+        <geom class="collision" size=".0075 .00405 .003" pos="-.0105 0 .00975"/>
+        <geom class="collision" size=".00345 .00255 .0015" pos="-.02055 .0012 .00975" quat="1 0 0 1"/>
+        <geom name="point_mass_5" type="sphere" size="0.012" pos="0 0 0" mass="0.032" material="invisible"/>
+        <site name="ball_3_3" pos="0 0 0"/>
+    </body>
+    
+</worldbody>
+<actuator>
+
+    <motor class="x2" name="thrust1_x" site="ball_1_1" gear="1 0 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust1_y" site="ball_1_1" gear="0 1 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust1_z" site="ball_1_1" gear="0 0 1 0 0 0" ctrlrange="0.0 5.0"/>
+
+    <motor class="x2" name="thrust2_x" site="ball_1_3" gear="1 0 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust2_y" site="ball_1_3" gear="0 1 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust2_z" site="ball_1_3" gear="0 0 1 0 0 0" ctrlrange="0.0 5.0"/>
+
+    <motor class="x2" name="thrust3_x" site="ball_2_2" gear="1 0 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust3_y" site="ball_2_2" gear="0 1 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust3_z" site="ball_2_2" gear="0 0 1 0 0 0" ctrlrange="0.0 5.0"/>
+
+    <motor class="x2" name="thrust4_x" site="ball_3_1" gear="1 0 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust4_y" site="ball_3_1" gear="0 1 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust4_z" site="ball_3_1" gear="0 0 1 0 0 0" ctrlrange="0.0 5.0"/>
+
+    <motor class="x2" name="thrust5_x" site="ball_3_3" gear="1 0 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust5_y" site="ball_3_3" gear="0 1 0 0 0 0" ctrlrange="-5.0 5.0"/>
+    <motor class="x2" name="thrust5_z" site="ball_3_3" gear="0 0 1 0 0 0" ctrlrange="0.0 5.0"/>
+</actuator>
+<tendon>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+	<site site="ball_1_1"/>
+	<site site="ball_1_2"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+	<site site="ball_1_2"/>
+	<site site="ball_1_3"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+	<site site="ball_2_1"/>
+	<site site="ball_2_2"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+	<site site="ball_2_2"/>
+	<site site="ball_2_3"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+	<site site="ball_3_1"/>
+	<site site="ball_3_2"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+	<site site="ball_3_2"/>
+	<site site="ball_3_3"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_1_1"/>
+    <site site="ball_2_1"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_1_2"/>
+    <site site="ball_2_2"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_1_3"/>
+    <site site="ball_2_3"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_2_1"/>
+    <site site="ball_3_1"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_2_2"/>
+    <site site="ball_3_2"/>
+    </spatial>
+
+    <spatial range="0.499990 0.500000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_2_3"/>
+    <site site="ball_3_3"/>
+    </spatial>
+
+    <spatial range="0.999990 1.000000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_1_1"/>
+    <site site="ball_1_3"/>
+    </spatial>
+
+    <spatial range="0.999990 1.000000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_1_1"/>
+    <site site="ball_3_1"/>
+    </spatial>
+
+    <spatial range="0.999990 1.000000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_1_2"/>
+    <site site="ball_3_2"/>
+    </spatial>
+
+    <spatial range="0.999990 1.000000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_1_3"/>
+    <site site="ball_3_3"/>
+    </spatial>
+
+    <spatial range="0.999990 1.000000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_2_1"/>
+    <site site="ball_2_3"/>
+    </spatial>
+
+    <spatial range="0.999990 1.000000" limited="true"  width=".003" stiffness="1.7500">
+    <site site="ball_3_1"/>
+    <site site="ball_3_3"/>
+    </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_1_1"/>
+        <site site="ball_2_2"/>
+        </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_2_1"/>
+        <site site="ball_1_2"/>
+        </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_1_2"/>
+        <site site="ball_2_3"/>
+        </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_2_2"/>
+        <site site="ball_1_3"/>
+        </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_2_1"/>
+        <site site="ball_3_2"/>
+        </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_3_1"/>
+        <site site="ball_2_2"/>
+        </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_2_2"/>
+        <site site="ball_3_3"/>
+        </spatial>
+
+        <spatial range="0.707097 0.707107" limited="true"  width=".003" stiffness="2.2500">
+        <site site="ball_3_2"/>
+        <site site="ball_2_3"/>
+        </spatial>
+</tendon>
+</mujoco>
