@@ -8,7 +8,7 @@ from catenary_flysurf import *
 from util import *
 from LQR_functions import *
 
-rows = 3 # Number of rows
+rows = 5 # Number of rows
 cols = rows # Number of columns
 x_init = -0.5
 y_init = -0.5
@@ -21,7 +21,8 @@ g = 9.81
 #quad_positions = [[rows, cols],[rows, 1],[1, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1]]  # List of positions with special elements
 #quad_positions = [[1, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, 1],[rows, cols]]  # List of positions with special elements
 #quad_positions = [[rows, cols],[rows, 1],[1, 1],[1, cols]]  # List of positions with special elements
-quad_positions = [[1, 1],[rows, 1],[int((rows-1)/2)+1,int((cols-1)/2)+1],[1, cols],[rows, cols]]  #
+#quad_positions = [[1, 1],[rows, 1],[int((rows-1)/2)+1,int((cols-1)/2)+1],[1, cols],[rows, cols]]  #
+quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 mass_points = 0.001
 m_total = (cols * rows)*mass_points
 m = mass_points* np.ones((rows, cols))
@@ -43,7 +44,7 @@ model = mujoco.MjModel.from_xml_path('scene_FlySurf_Simulator.xml')
 data = mujoco.MjData(model)
 mujoco.mj_forward(model, data)
 
-time_change = 12
+time_change = 6
 n_tasks = 2
 total_time = time_change*n_tasks
 time_step_num = round(total_time / model.opt.timestep)
@@ -162,36 +163,21 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running() and data.time <= total_time:
         step_start = time.time()
 
-        print(xd)
-
         # Reshape xd to extract positions
-        xd_pos = np.column_stack((xd[::6], xd[1::6], xd[2::6]))
-
-        print('xd_pos',xd_pos)
+        xd_pos =  np.reshape(np.array([xd[0::6], xd[1::6], xd[2::6]]).T, (-1, 1)).flatten()
 
         # Call the shape_controller_3D function
         u_shape = shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, xd_pos, n_points * n_points2, shape, R_d,
                                       s_d, c_0)
 
         # Update xd_pos with the computed control input
-        xd_pos = xd_pos + u_shape * factor * model.opt.timestep
+        xd_pos = xd_pos + 0*u_shape * factor * model.opt.timestep
 
         # Combine updated positions and control input
         xd = np.reshape(
             np.vstack((np.reshape(xd_pos, (3, -1)), np.reshape(factor * u_shape, (3, -1)))).T.flatten(),
             (-1, 1)
-        ).flatten()
-
-        print(xd)
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot points with black stars and a linewidth of 1.0
-        ax.plot3D(xd[0::6], xd[1::6], xd[2::6], 'k*', linewidth=1.0)
-
-        # Show the plot
-        plt.show()
+        )
 
         states = data.xpos
         vels = data.cvel
