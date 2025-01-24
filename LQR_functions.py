@@ -11,7 +11,7 @@ def norm_matrix(i1, j1, i2, j2, x, n_points):
 def x_dot(i1, j1, i2, j2, x, n_points):
     aux = x[6 * n_points * (j1 - 1) + 6 * i1 - 6:6 * n_points * (j1 - 1) + 6 * i1 - 3]
     aux2 = x[6 * n_points * (j2 - 1) + 6 * i2 - 6:6 * n_points * (j2 - 1) + 6 * i2 - 3]
-    return np.outer(aux - aux2, aux - aux2)
+    return np.outer(aux - aux2, aux - aux2) 
 
 
 def component_A(i1, j1, i2, j2, x, n_points, k, l0):
