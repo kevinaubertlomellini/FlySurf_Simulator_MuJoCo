@@ -1,7 +1,7 @@
 from scipy.sparse.csgraph import structural_rank
 import math
 
-def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, file_path):
+def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, file_path):
     """
     Generates XML for a grid of rows and columns with specified spacing and saves it to a file.
 
@@ -70,10 +70,10 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
             y_pos = y_init + row * y_spacing
 
             # Check if the current position is in the quad_positions list
+            # <joint type="free" damping="{damp_point}"/>
             if [row + 1, col + 1] in quad_positions:  # Positions are 1-indexed
                 body_template = f"""
-    <body name="quad_{element_counter}" pos="{x_pos:.4f} {y_pos:.4f} 0.05" childclass="x2">
-        <joint type="free" damping="0.06"/>
+    <body name="quad_{element_counter}" pos="{x_pos:.4f} {y_pos:.4f} 0.65" childclass="x2">
         <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
         <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
         <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
@@ -91,8 +91,8 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
                 element_counter += 1
             else:
                 body_template = f"""
-    <body pos="{x_pos:.4f} {y_pos:.4f} 0.02">
-        <joint type="free" damping="0.06"/> 
+    <body pos="{x_pos:.4f} {y_pos:.4f} 0.6">
+        <joint type="free" damping="{damp_quad}"/> 
         <geom class="ball"/>
         <site name="ball_{row + 1}_{col + 1}" pos="0 0 0"/>
     </body>

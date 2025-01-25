@@ -1,32 +1,36 @@
 import mujoco.viewer
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import time
 
 from Generation_Automatic import *
 from catenary_flysurf import *
 from util import *
 from LQR_functions import *
 
-rows = 5 # Number of rows
+rows = 2# Number of rows
 cols = rows # Number of columns
 x_init = -0.5
 y_init = -0.5
 x_length = 1  # Total length in x direction
 y_length = 1  # Total length in y direction
-str_stif = 1.75
-shear_stif = 1.75
-flex_stif = 2.25
+str_stif = 0.25
+shear_stif = 0.005
+flex_stif = 0.005
 g = 9.81
 #quad_positions = [[rows, cols],[rows, 1],[1, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1]]  # List of positions with special elements
 #quad_positions = [[1, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, 1],[rows, cols]]  # List of positions with special elements
 #quad_positions = [[rows, cols],[rows, 1],[1, 1],[1, cols]]  # List of positions with special elements
 #quad_positions = [[1, 1],[rows, 1],[int((rows-1)/2)+1,int((cols-1)/2)+1],[1, cols],[rows, cols]]  #
 quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
-mass_points = 0.001
+mass_points = 0.002
 m_total = (cols * rows)*mass_points
 m = mass_points* np.ones((rows, cols))
 mass_quads = 0.032
+damp_point = 0.01
+damp_quad = 0.06
 file_path = "config_FlySurf_Simulator.xml"  # Output file name
 
 x_actuators = np.array(quad_positions)
@@ -39,13 +43,20 @@ y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of division
 points_coord = x_actuators - 1
 quad_indices = func_quad_indices(quad_positions, cols)
 
-generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, file_path)
+generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, file_path)
+
+# Set up the video writer for .mp4 format
+frame_width = 640  # Set the width of the video
+frame_height = 480  # Set the height of the video
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use the 'mp4v' codec for .mp4 format
+out = cv2.VideoWriter('simulation_output.mp4', fourcc, 30, (frame_width, frame_height))  # 30 FPS
+
 model = mujoco.MjModel.from_xml_path('scene_FlySurf_Simulator.xml')
 data = mujoco.MjData(model)
 mujoco.mj_forward(model, data)
 
-time_change = 6
-n_tasks = 2
+time_change = 4
+n_tasks = 3
 total_time = time_change*n_tasks
 time_step_num = round(total_time / model.opt.timestep)
 
@@ -57,8 +68,8 @@ n_points = rows
 n_points2 = cols
 l0= x_spacing
 iter = time_step_num
-c1 = 0.06
-c2 = 0.06
+c1 = damp_point
+c2 = damp_quad
 n_visible_points = n_actuators
 x_actuators_2 = np.zeros((n_actuators, 3))
 for i in range(n_actuators):
@@ -98,13 +109,15 @@ for j in range(n_points2):
 
 Q = 1*np.eye(6 * n_points * n_points2)
 for yu in range(1, n_points * n_points2 + 1):
-    Q[6 * yu - 4, 6 * yu - 4] = 700 # Altitude
-    Q[6 * yu - 6:6 * yu - 4, 6 * yu - 6:6 * yu - 4] =  700 * np.eye(2) # x and y
+    Q[6 * yu - 4, 6 * yu - 4] = 3800 # Altitude
+    Q[6 * yu - 6:6 * yu - 4, 6 * yu - 6:6 * yu - 4] =  5000 * np.eye(2) # x and y
     Q[6 * yu - 3:6 * yu - 1, 6 * yu - 3:6 * yu - 1] = 150 * np.eye(2)  # velocity
 
 R = 250 * np.eye(3 * n_actuators) # force in z
 for yi in range(n_actuators):
     R[3 * yi + 1:3 * yi + 3, 3 * yi + 1:3 * yi + 3] = 150 * np.eye(2) # force in x and y
+
+print(model.opt.timestep)
 
 K = k_dlqr(n_points,n_points2,str_stif,shear_stif,flex_stif,c1,c2,l0,m,mass_quads,x_actuators,x,Q,R,n_visible_points,x_visible_points_2,model.opt.timestep)
 
@@ -117,25 +130,21 @@ for kv in range(1, n_actuators + 1):
     forces = np.array([0, 0, (m_total + (mass_quads-mass_points)*n_actuators)*g / n_actuators])
     u_Forces[3 * kv - 3:3 * kv, 0] = forces.flatten()
 
-import numpy as np
+print(u_Forces)
 
-# Constants
+# Define parameters
 alpha_H = 2
 alpha_G = 20
 alpha_0 = 2
 alpha_Hd = 3
 
-# Reshape shape
-shape = np.reshape(np.array([xd[0::6], xd[1::6], xd[2::6]]).T, (-1, 1)).flatten()
+shape = np.reshape(np.array([x[::6],x[1::6],x[2::6]]),(3, n_points * n_points2)).reshape(-1,1, order='F')
 
-# Define rotation matrix (assuming rotationMatrix(0, 0, 0) is identity)
-R_d = np.eye(3)
+print(shape)
+
+R_d = rotation_matrix(0, 0, 0)
 s_d = 1
 c_0 = np.array([0, 0, 0])
-factor=0.125
-
-# Call x_des (assuming the function is defined)
-x_c = x_des(n_points, n_points2, shape, R_d, s_d, c_0)
 
 # Generate mesh grid for x and y coordinates
 x_g = np.linspace(-0.375, 0.375, n_points)
@@ -146,7 +155,7 @@ x_g_vector0 = X_g.flatten()
 y_g_vector0 = Y_g.flatten()
 
 # Define Gaussian parameters
-Amp = 1.1  # Amplitude
+Amp = 1.12  # Amplitude
 x0 = 0.0  # Center of Gaussian in x
 y0 = 0.0  # Center of Gaussian in y
 sigma_x = 0.575  # Standard deviation in x
@@ -162,22 +171,12 @@ shape_gaussian = np.vstack((x_g_vector0, y_g_vector0, z_g_vector0)).T.flatten()
 with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running() and data.time <= total_time:
         step_start = time.time()
-
-        # Reshape xd to extract positions
-        xd_pos =  np.reshape(np.array([xd[0::6], xd[1::6], xd[2::6]]).T, (-1, 1)).flatten()
-
-        # Call the shape_controller_3D function
-        u_shape = shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, xd_pos, n_points * n_points2, shape, R_d,
-                                      s_d, c_0)
-
-        # Update xd_pos with the computed control input
-        xd_pos = xd_pos + 0*u_shape * factor * model.opt.timestep
-
-        # Combine updated positions and control input
-        xd = np.reshape(
-            np.vstack((np.reshape(xd_pos, (3, -1)), np.reshape(factor * u_shape, (3, -1)))).T.flatten(),
-            (-1, 1)
-        )
+        viewer.cam.lookat[0] = 0.5  # Move camera target in the x-direction
+        viewer.cam.lookat[1] = -0.65  # Move camera target in the y-direction
+        viewer.cam.lookat[2] = 1  # Move camera target in the z-direction
+        viewer.cam.distance = 2.0  # Zoom out
+        viewer.cam.azimuth = 90  # Change azimuth angle
+        viewer.cam.elevation = -30  # Change elevation angle
 
         states = data.xpos
         vels = data.cvel
@@ -211,6 +210,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
         mujoco.mj_step(model, data)
 
+
         u_save[:, time_num] = u2.flatten()
 
         x_save[:, time_num] = x.flatten()
@@ -219,6 +219,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         with viewer.lock():
             viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = int(data.time % 2)
 
+        # Render the simulation scene
         viewer.sync()
 
         time_until_next_step = model.opt.timestep - (time.time() - step_start)
@@ -229,9 +230,24 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         if time_num >= time_step_num:
             break
 
-        if 1*time_change< time_num*model.opt.timestep < 1.6*time_change:
+        if 1*time_change == time_num*model.opt.timestep:
+            x1 = (x_g_vector0.reshape(-1, 1) - xd[::6])/(1.5*time_change/model.opt.timestep)
+            y1 = (y_g_vector0.reshape(-1, 1) - xd[1::6])/(1.5*time_change/model.opt.timestep)
+            z1 = (z_g_vector0.reshape(-1, 1) - xd[2::6])/(1.5*time_change/model.opt.timestep)
+        if 1*time_change< time_num*model.opt.timestep < 1.5*time_change:
+            xd[::6] = xd[::6] + x1
+            xd[1::6] = xd[1::6] + y1
+            xd[2::6] = xd[2::6] + z1
+        if 2*time_change< time_num*model.opt.timestep < 2.6*time_change:
             xd[2::6] = xd[2::6] + 0.75 / (time_change/model.opt.timestep)
             xd[::6] = xd[::6] + 0.75 /  (time_change/model.opt.timestep)
+
+        if time_num ==1:
+            for i in range(7):
+                time.sleep(1.0)
+                print(i)
+    # Release the video writer once done
+    out.release()
 
 t = np.arange(0, iter * model.opt.timestep, model.opt.timestep)
 cmap = plt.get_cmap("tab10")

@@ -113,56 +113,90 @@ def func_quad_indices(quad_positions, cols):
         # Convert 2D (row, col) to 1D index
         index = (row - 1) * cols + col
         quad_indices.append(index)
+    return quad_indices
 
 def shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, x, n_points, c, R_d, s_d, c_0):
-    x = np.reshape(x, (3, n_points))
-    c = np.reshape(c, (3, n_points))
+    """
+    Python version of the shape_controller_3D function.
 
-    c_0 = c_0[:, np.newaxis]
+    Parameters:
+    alpha_H, alpha_G, alpha_0, alpha_Hd : float
+        Control parameters.
+    x : numpy.ndarray
+        Current positions, reshaped as a (3, n_points) array.
+    n_points : int
+        Number of points.
+    c : numpy.ndarray
+        Desired positions, reshaped as a (3, n_points) array.
+    R_d : numpy.ndarray
+        Desired rotation matrix (3x3).
+    s_d : float
+        Desired scaling factor.
+    c_0 : numpy.ndarray
+        Desired centroid position (3,).
 
-    # Compute centroid of x
-    x_0 = np.mean(x, axis=1).reshape(-1, 1)
-    x_b = x - np.tile(x_0, n_points)  # Shape of x (x without centroid)
+    Returns:
+    numpy.ndarray
+        Control input reshaped as a (3*n_points,) array.
+    """
+    # Reshape x and c to (3, n_points)
+    x = x.reshape((3, n_points), order='F')
+    c = c.reshape((3, n_points), order='F')
+    # Compute centroids
+    x_0 = np.mean(x, axis=1, keepdims=True)  # Centroid of x
+    c_00 = np.mean(c, axis=1, keepdims=True)  # Centroid of c
 
-    # Compute centroid of c
-    c_00 = np.mean(c, axis=1).reshape(-1, 1)
-    c_b = c - np.tile(c_00, n_points)
+    # Compute shapes (subtract centroids)
+    x_b = x - x_0
+    c_b = c - c_00
 
-    # Compute H, R_h, and s_h using a helper function (needs to be implemented)
+    # Compute H, R_h, s_h using matrix_H_3D function
     H, R_h, s_h = matrix_H_3D(x_b, c_b)
-    u_H = H @ c_b - x_b
 
-    # Compute G
+    # Control laws
+    u_H = H @ c_b - x_b
     G = x_b @ np.linalg.pinv(c_b)
     u_G = G @ c_b - x_b
-
-    # Compute individual components of u
     u_y = alpha_H * u_H + alpha_G * u_G
-    u_0 = -alpha_0 * (x_0 - c_0) @ np.ones((1, n_points))
+    u_0 = -alpha_0 * (x_0 - c_0.reshape((3, 1))) @ np.ones((1, n_points))
     Hd = s_d * R_d
     u_Hd = alpha_Hd * (Hd @ c_b - x_b)
 
-    # Combine all components of u
+    # Total control input
     u = u_y + u_0 + u_Hd
-    u = u.flatten()  # Reshape into a 1D array
+    # Reshape to (3*n_points,)
+    return u.flatten(order='F').reshape(-1, 1)
 
-    return u
 
 
 def matrix_H_3D(Q_b, C_b):
-    # Covariance matrix
+    """
+    Compute the transformation matrix H, rotation matrix R_h, and scaling factor s_h
+    for 3D point sets Q_b and C_b.
+
+    Parameters:
+    Q_b (numpy.ndarray): A 3xN matrix representing the centered coordinates of the first point set.
+    C_b (numpy.ndarray): A 3xN matrix representing the centered coordinates of the second point set.
+
+    Returns:
+    H (numpy.ndarray): The transformation matrix combining rotation and scaling.
+    R_h (numpy.ndarray): The rotation matrix.
+    s_h (float): The scaling factor.
+    """
+    # Compute the covariance matrix
     H_R = C_b @ Q_b.T
 
-    # Singular Value Decomposition
+    # Perform Singular Value Decomposition
     U, _, Vt = np.linalg.svd(H_R)
-    V = Vt.T
-    R_h = V @ U.T
 
-    # Scale factor computation
+    # Compute the rotation matrix
+    R_h = Vt.T @ U.T
+
+    # Compute the scaling factor
     c_s = np.trace(C_b @ C_b.T)
     s_h = np.trace(Q_b.T @ R_h @ C_b) / c_s
 
-    # Compute H
+    # Compute the transformation matrix
     H = s_h * R_h
 
     return H, R_h, s_h
@@ -185,3 +219,22 @@ def x_des(n_points, n_points2, c, r_d, s_d, c_0):
     x_c = x_c.flatten()
 
     return x_c
+
+
+def rotation_matrix(roll, pitch, yaw):
+    # Compute individual rotation matrices
+    Rx = np.array([[1, 0, 0],
+                   [0, np.cos(roll), -np.sin(roll)],
+                   [0, np.sin(roll), np.cos(roll)]])
+
+    Ry = np.array([[np.cos(pitch), 0, np.sin(pitch)],
+                   [0, 1, 0],
+                   [-np.sin(pitch), 0, np.cos(pitch)]])
+
+    Rz = np.array([[np.cos(yaw), -np.sin(yaw), 0],
+                   [np.sin(yaw), np.cos(yaw), 0],
+                   [0, 0, 1]])
+
+    # Combined rotation matrix
+    R = Rz @ Ry @ Rx
+    return R
