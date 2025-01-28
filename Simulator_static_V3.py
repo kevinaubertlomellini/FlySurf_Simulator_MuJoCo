@@ -10,8 +10,8 @@ from Generation_Automatic import *
 from catenary_flysurf import *
 from util import *
 
-rows = 32 # Number of rows
-cols = 32 # Number of columns
+rows = 5 # Number of rows
+cols = 5 # Number of columns
 x_init = 0.0
 y_init = -0.5
 x_length = 1  # Total length in x direction

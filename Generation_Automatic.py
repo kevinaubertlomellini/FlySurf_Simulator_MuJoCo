@@ -73,7 +73,8 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
             # <joint type="free" damping="{damp_point}"/>
             if [row + 1, col + 1] in quad_positions:  # Positions are 1-indexed
                 body_template = f"""
-    <body name="quad_{element_counter}" pos="{x_pos:.4f} {y_pos:.4f} 0.65" childclass="x2">
+    <body name="quad_{element_counter}" pos="{x_pos:.4f} {y_pos:.4f} 0.05" childclass="x2">
+        <joint type="free" damping="{damp_point}"/>
         <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
         <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
         <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
@@ -85,13 +86,13 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
     """
                 # Add actuator for each quad
                 actuator_output.append(f"""
-    <motor class="x2" name="thrust{element_counter}_x" site="ball_{row + 1}_{col + 1}" gear="1 0 0 0 0 0" ctrlrange="-5.0 5.0"/>
-    <motor class="x2" name="thrust{element_counter}_y" site="ball_{row + 1}_{col + 1}" gear="0 1 0 0 0 0" ctrlrange="-5.0 5.0"/>
-    <motor class="x2" name="thrust{element_counter}_z" site="ball_{row + 1}_{col + 1}" gear="0 0 1 0 0 0" ctrlrange="0.0 5.0"/>""")
+    <motor class="x2" name="thrust{element_counter}_x" site="ball_{row + 1}_{col + 1}" gear="1 0 0 0 0 0" ctrlrange="-100.0 100.0"/>
+    <motor class="x2" name="thrust{element_counter}_y" site="ball_{row + 1}_{col + 1}" gear="0 1 0 0 0 0" ctrlrange="-100.0 100.0"/>
+    <motor class="x2" name="thrust{element_counter}_z" site="ball_{row + 1}_{col + 1}" gear="0 0 1 0 0 0" ctrlrange="0.0 100.0"/>""")
                 element_counter += 1
             else:
                 body_template = f"""
-    <body pos="{x_pos:.4f} {y_pos:.4f} 0.6">
+    <body pos="{x_pos:.4f} {y_pos:.4f} 0.01">
         <joint type="free" damping="{damp_quad}"/> 
         <geom class="ball"/>
         <site name="ball_{row + 1}_{col + 1}" pos="0 0 0"/>

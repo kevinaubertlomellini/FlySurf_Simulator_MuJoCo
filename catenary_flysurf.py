@@ -9,6 +9,7 @@ import time
 from scipy.optimize import root_scalar
 import matplotlib
 from scipy.spatial import distance
+
 # matplotlib.use('tkagg')
 plt.rc('font', family='serif')
 matplotlib.rcParams['pdf.fonttype'] = 42
@@ -20,7 +21,7 @@ import matplotlib.colors as mcolors
 christmas_colors = [
     "#006400",  # DarkGreen
     "#FFFFFF",  # White
-    "#8B0000"   # DarkRed
+    "#8B0000"  # DarkRed
 ]
 # Create a linear segmented colormap from these colors
 christmas_cmap = mcolors.LinearSegmentedColormap.from_list("christmas", christmas_colors, N=256)
@@ -30,7 +31,7 @@ class CatenaryFlySurf:
     def __init__(self, lc, lr, l_cell, num_sample_per_curve=10):
         self.lc = lc
         self.lr = lr
-        self.num_points = lc*lr
+        self.num_points = lc * lr
         self.cell_length = l_cell
         self.num_samples = num_sample_per_curve
         self.active_ridge = None
@@ -41,7 +42,7 @@ class CatenaryFlySurf:
         self.catenary_surface_params = dict()  #
 
         for i in range(self.num_points):
-            for j in range(i+1, self.num_points):
+            for j in range(i + 1, self.num_points):
                 i1, j1 = self._index2coord(i)
                 i2, j2 = self._index2coord(j)
                 self.catenary_curve_params[tuple(sorted((i, j)))] = [
@@ -64,13 +65,14 @@ class CatenaryFlySurf:
         :param points_position: ndarray that specifies the position of the lifting points
         """
         # check the discrete distance from the center of the mesh to the lifting point
-        dist = np.sum(np.abs(points_coord - (points_coord.min(axis=0) + points_coord.max(axis=0))/2), axis=1)
+        dist = np.sum(np.abs(points_coord - (points_coord.min(axis=0) + points_coord.max(axis=0)) / 2), axis=1)
         # normalize the height between 0 and 1
         if abs(points_position[:, 2].max() - points_position[:, 2].min()) < 1e-6:
             height_norm = np.zeros_like(dist)
         else:
-            height_norm = (points_position[:, 2] - points_position[:, 2].min()) / (points_position[:, 2].max() - points_position[:, 2].min())
-        order_of_points = np.argsort(dist-height_norm)
+            height_norm = (points_position[:, 2] - points_position[:, 2].min()) / (
+                        points_position[:, 2].max() - points_position[:, 2].min())
+        order_of_points = np.argsort(dist - height_norm)
         # order_of_points = np.argsort(- points_position[:, -1])
 
         points = points_position[order_of_points]
@@ -90,7 +92,7 @@ class CatenaryFlySurf:
             surface_points = np.zeros((num_edges * num_samples, 3))
             index = 0
             for j in range(num_vertices):
-                for k in range(j+1, num_vertices):
+                for k in range(j + 1, num_vertices):
                     edge = tuple(sorted((surface[j], surface[k])))
                     sample_points = self.catenary_curve_params[edge][2][-1]
                     surface_points[(index) * num_samples:(index + 1) * num_samples, :] = sample_points
@@ -132,7 +134,6 @@ class CatenaryFlySurf:
         points = np.vstack((x_flat, y_flat)).T
 
         # Barycentric test to check if points are inside the triangle
-
 
         inside = np.array([self._barycentric_test(point, p1, p2, p3) for point in points])
 
@@ -186,7 +187,7 @@ class CatenaryFlySurf:
         """
         # Project points to 2D by discarding the z-coordinate
         points_array = np.array(points)
-        points_2d = network_coords # points_array[:, :2]
+        points_2d = network_coords  # points_array[:, :2]
 
         # Number of points
         n_points = points_2d.shape[0]
@@ -223,7 +224,6 @@ class CatenaryFlySurf:
                     edges[tuple(sorted((coord1, coord2)))] = points_array[i, :], points_array[j, :]
                     local_indices = tuple(sorted((i, j)))
                     edges_set.add(local_indices)
-
 
         # Generate triangle surfaces
         active_surface = []
@@ -416,7 +416,7 @@ class CatenaryFlySurf:
         error_length = L - L_cat
 
         # Objective function
-        objective_value = error_z1**2 + error_z2**2 + error_length**2
+        objective_value = error_z1 ** 2 + error_z2 ** 2 + error_length ** 2
 
         # Gradients
         dz1_dc = np.cosh((x1 - x0) / c) - (x1 - x0) / c * np.sinh((x1 - x0) / c)
@@ -463,7 +463,7 @@ class CatenaryFlySurf:
         rotation_axis = np.cross(direction, x_axis)
         rotation_angle = np.arccos(np.dot(direction, x_axis))
         if abs(rotation_angle) < 1e-6:  # Avoid divide-by-zero
-            rotation_angle = 1e-6*((rotation_angle > 0)-0.5)
+            rotation_angle = 1e-6 * ((rotation_angle > 0) - 0.5)
 
         if np.linalg.norm(rotation_axis) > 1e-6:  # Avoid divide-by-zero
             rotation_axis /= np.linalg.norm(rotation_axis)
@@ -580,12 +580,12 @@ class CatenaryFlySurf:
 
     def _coord2index(self, coord):
         i, j = coord
-        return i*self.lc + j
+        return i * self.lc + j
 
     def _index2coord(self, index: int):
         i = index // self.lc
-        j = index - i*self.lc
-        return  i, j
+        j = index - i * self.lc
+        return i, j
 
 
 def visualize(fig, ax, flysurf, plot_dot=True, plot_curve=True, plot_surface=True, num_samples=10):
@@ -730,29 +730,29 @@ def find_all_intersections_batch(S1, S2):
 
 def sampling_v1(fig, ax, flysurf, resolution, points, plot=False):
     """ NOTE:
-        We have to ensure that the 4 corners of the mesh are 
+        We have to ensure that the 4 corners of the mesh are
         ALWAYS giving us four active ridges
     """
     # collection of all samples
     # FIRST: Four corners
-    num_side_samples = resolution+2
-    all_samples = np.zeros((num_side_samples**2, 3))
+    num_side_samples = resolution + 2
+    all_samples = np.zeros((num_side_samples ** 2, 3))
     # upper-right
     # upper-left
     # lower-left
     # lower-right
-    all_samples[[num_side_samples**2-1, 
-                 num_side_samples**2-num_side_samples,
-                 0, num_side_samples-1], :] = points[0:4, :]
-    
+    all_samples[[num_side_samples ** 2 - 1,
+                 num_side_samples ** 2 - num_side_samples,
+                 0, num_side_samples - 1], :] = points[0:4, :]
+
     if plot:
         ax.plot(points[0:4, 0], points[0:4, 1], points[0:4, 2], "*")
 
     four_outermost_edges = [(0, resolution),  # bottom
-                            (resolution, (resolution+1)**2-1),  # right
-                            ((resolution+1)*resolution, (resolution+1)**2-1),  # top
-                            (0, (resolution+1)*resolution)]  # left
-    
+                            (resolution, (resolution + 1) ** 2 - 1),  # right
+                            ((resolution + 1) * resolution, (resolution + 1) ** 2 - 1),  # top
+                            (0, (resolution + 1) * resolution)]  # left
+
     line_seg_points = []
     for i, connection in enumerate(four_outermost_edges):
         # Retrieve curve parameters and sampled points
@@ -760,17 +760,19 @@ def sampling_v1(fig, ax, flysurf, resolution, points, plot=False):
         dist, rotation, translation, samples_per_connection = other_data
 
         # Plot the full catenary curve
-        full_curve_global = samples_per_connection[1:len(samples_per_connection)-1]
+        full_curve_global = samples_per_connection[1:len(samples_per_connection) - 1]
 
         # SECOND: four sides
         if i == 0:
-            all_samples[1:num_side_samples-1, :] = full_curve_global
+            all_samples[1:num_side_samples - 1, :] = full_curve_global
         elif i == 1:
-            all_samples[range(num_side_samples*2 - 1, num_side_samples**2-1, num_side_samples), :] = full_curve_global
+            all_samples[range(num_side_samples * 2 - 1, num_side_samples ** 2 - 1, num_side_samples),
+            :] = full_curve_global
         elif i == 2:
-            all_samples[(num_side_samples-1)*num_side_samples+1:num_side_samples**2-1, :] = full_curve_global
+            all_samples[(num_side_samples - 1) * num_side_samples + 1:num_side_samples ** 2 - 1, :] = full_curve_global
         elif i == 3:
-            all_samples[range(num_side_samples, (num_side_samples-2)*num_side_samples+1, num_side_samples), :] = full_curve_global
+            all_samples[range(num_side_samples, (num_side_samples - 2) * num_side_samples + 1, num_side_samples),
+            :] = full_curve_global
 
         line_seg_points.append(full_curve_global[:, 0:2])
         if plot:
@@ -791,7 +793,7 @@ def sampling_v1(fig, ax, flysurf, resolution, points, plot=False):
         for j in range(resolution):
             S[i][j, 0, :] = points1[j, :]
             S[i][j, 1, :] = points2[j, :]
-    
+
     intersctions = find_all_intersections_batch(S[0], S[1])
 
     surf_info = []
@@ -810,7 +812,7 @@ def sampling_v1(fig, ax, flysurf, resolution, points, plot=False):
                             break
                     if good:
                         surf_corners.append(v)
-        
+
         surf_info.append((surf_corners, [c, x, y, z]))
 
     z_vals = []
@@ -820,11 +822,13 @@ def sampling_v1(fig, ax, flysurf, resolution, points, plot=False):
             if flysurf._barycentric_test(point, surf_corners[0][:2], surf_corners[1][:2], surf_corners[2][:2]):
                 z_vals.append(flysurf._catenary_surface((c, x, y, z), point[0], point[1]))
                 break
-    
+
     # THIRD: inner surfaces
     intersctions = np.column_stack((intersctions, z_vals))
 
-    all_samples[[i*num_side_samples + j for i in range(1, num_side_samples-1) for j in range(1, num_side_samples -1)], :] = intersctions
+    all_samples[
+    [i * num_side_samples + j for i in range(1, num_side_samples - 1) for j in range(1, num_side_samples - 1)],
+    :] = intersctions
     if plot:
         ax.plot(intersctions[:, 0], intersctions[:, 1], intersctions[:, 2], "*")
 
@@ -832,8 +836,9 @@ def sampling_v1(fig, ax, flysurf, resolution, points, plot=False):
         plt.pause(0.0001)
     return all_samples
 
+
 def oscillation(i):
-    return np.sin(i*np.pi/100)*0.01
+    return np.sin(i * np.pi / 100) * 0.01
 
 
 if __name__ == "__main__":
@@ -846,20 +851,20 @@ if __name__ == "__main__":
                             lower-right
     """
     mesh_size = 25
-    points_coord = np.array([[mesh_size-1, mesh_size-1],
-                             [mesh_size-1, 0],
+    points_coord = np.array([[mesh_size - 1, mesh_size - 1],
+                             [mesh_size - 1, 0],
                              [0, 0],
-                             [0, mesh_size-1],
-                             [(mesh_size-1)//2, (mesh_size-1)//2]])
-                            #  [2, 4],
-                            #  [6, 4],
-                            #  [5, 5]])
-    
-    points = np.array([[ 0.9,   0.4,   0.45],
-                       [ 0.1,   0.4,   0.45],
-                       [ 0.1,  -0.4,   0.45],
-                       [ 0.9,  -0.4,   0.45],
-                       [ 0.5,   0.,    0.45]])
+                             [0, mesh_size - 1],
+                             [(mesh_size - 1) // 2, (mesh_size - 1) // 2]])
+    #  [2, 4],
+    #  [6, 4],
+    #  [5, 5]])
+
+    points = np.array([[0.9, 0.4, 0.45],
+                       [0.1, 0.4, 0.45],
+                       [0.1, -0.4, 0.45],
+                       [0.9, -0.4, 0.45],
+                       [0.5, 0., 0.45]])
 
     # points = np.array([[ 0.41,   0.39,    0.15],       # 0
     #                    [-0.38,   0.42,   -0.05],     # 1
@@ -868,11 +873,10 @@ if __name__ == "__main__":
     #                 #    [-0.19,   0.01,     0.2],
     #                 #    [ 0.21,  -0.02,     0.1],
     #                    [0.04,    0.07,    -0.1]])
-    flysurf = CatenaryFlySurf(mesh_size, mesh_size, 1.0/(mesh_size-1), num_sample_per_curve=mesh_size+1)
+    flysurf = CatenaryFlySurf(mesh_size, mesh_size, 1.0 / (mesh_size - 1), num_sample_per_curve=mesh_size + 1)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.view_init(elev=90, azim=-90)
-    
 
     for i in range(10000):
         ax.clear()
@@ -885,7 +889,7 @@ if __name__ == "__main__":
         print(time.time() - time_start)
         # visualize(fig, ax, flysurf, plot_dot=True, plot_curve=True, plot_surface=True, num_samples=10)
 
-        all_samples = sampling_v1(fig, ax, flysurf, mesh_size-1)
+        all_samples = sampling_v1(fig, ax, flysurf, mesh_size - 1)
 
         # print(all_samples)
         ax.plot(all_samples[0:2, 0], all_samples[0:2, 1], all_samples[0:2, 2], "*")
@@ -895,4 +899,3 @@ if __name__ == "__main__":
         ax.set_zlabel("Z")
         plt.pause(0.0001)
         input()
-
