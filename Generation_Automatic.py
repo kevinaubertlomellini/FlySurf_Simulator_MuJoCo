@@ -1,7 +1,7 @@
 from scipy.sparse.csgraph import structural_rank
 import math
 
-def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, file_path):
+def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, delta, file_path):
     """
     Generates XML for a grid of rows and columns with specified spacing and saves it to a file.
 
@@ -27,6 +27,7 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
     # Add the Mujoco model header
     xml_output.append(f"""<mujoco model="Skydio X2">
   <compiler autolimits="true" assetdir="assets"/>
+  <option timestep="{delta}"/>  <!-- Updated timestep -->
 
   <option timestep="0.01" density="1.225" viscosity="1.8e-5"/>
   <default>
@@ -52,8 +53,18 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
     <material name="invisible" rgba="0 0 0 0"/>
     <mesh class="x2" file="X2_lowpoly.obj" scale="0.0015 0.0015 0.0015"/>
   </asset>
+  
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+  </asset>
+  
 
   <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
 """)
 
     element_counter = 1  # Start counting quads from 1

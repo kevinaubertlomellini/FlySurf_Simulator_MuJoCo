@@ -238,3 +238,42 @@ def rotation_matrix(roll, pitch, yaw):
     # Combined rotation matrix
     R = Rz @ Ry @ Rx
     return R
+
+def init_simulator(quad_positions):
+    x_actuators = ((np.array(quad_positions) + 1) / 2).astype(int)
+    n_actuators = x_actuators.shape[0]
+    return [x_actuators, n_actuators]
+
+def shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
+    # Generate mesh grid for x and y coordinates
+    x_g = np.linspace(-sides[0]/2, sides[0]/2, n_points[0])
+    y_g = np.linspace(-sides[1]/2, sides[1]/2, n_points[1])
+    X_g, Y_g = np.meshgrid(x_g, y_g)
+
+    x_g_vector0 = X_g.flatten()
+    y_g_vector0 = Y_g.flatten()
+
+    # Define Gaussian parameters
+    Amp = amplitude # Amplitude
+    x0 = center[0] # Center of Gaussian in x
+    y0 = center[1] # Center of Gaussian in y
+    sigma_x = sd[0]  # Standard deviation in x
+    sigma_y = sd[1] # Standard deviation in y
+
+    # Calculate the 2D Gaussian
+    z_g_vector0 = Amp * np.exp(-((x_g_vector0 - x0) ** 2 / (2 * sigma_x ** 2) +
+                                 (y_g_vector0 - y0) ** 2 / (2 * sigma_y ** 2))) - 0.5
+
+    # Combine into shape_gaussian
+    shape_gaussian = np.vstack((x_g_vector0, y_g_vector0, z_g_vector0)).T.flatten()
+    return shape_gaussian
+
+def u_gravity_forces(n_UAVs, mass_points, mass_UAVs , rows, cols, g):
+    u_Forces = np.zeros((3 * n_UAVs, 1))
+    for kv in range(1, n_UAVs + 1):
+        if kv != 3:
+            forces = np.array([0, 0, ((cols * rows) * mass_points / 8 + mass_UAVs- mass_points * n_UAVs) * g])
+        else:
+            forces = np.array([0, 0, ((cols * rows) * mass_points / 2 + mass_UAVs- mass_points * n_UAVs) * g])
+        u_Forces[3 * kv - 3:3 * kv, 0] = forces.flatten()
+    return u_Forces
