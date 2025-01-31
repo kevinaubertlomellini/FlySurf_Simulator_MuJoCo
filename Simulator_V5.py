@@ -12,7 +12,7 @@ from LQR_functions import *
 
 # ESTIMATOR ADDED
 
-rows = 25# Number of rows
+rows = 17# Number of rows
 cols = rows # Number of columns
 x_init = -0.5
 y_init = -0.5
@@ -61,8 +61,8 @@ mujoco.mj_forward(model, data)
 
 delta_factor = 5
 delta = delta_factor*model.opt.timestep
-time_change = 20
-n_tasks = 3
+time_change = 10
+n_tasks = 2
 total_time = time_change*n_tasks
 time_step_num = round(total_time / model.opt.timestep)
 
@@ -92,7 +92,6 @@ e_est_save = np.zeros((iter,1))
 e_est_save2 = np.zeros((iter,1))
 e_real_save = np.zeros((iter,1))
 e_real_save2 = np.zeros((iter,1))
-
 
 t_save = np.zeros((iter, 1))
 xd_save = np.zeros((6*n_points*n_points2, iter))
@@ -200,131 +199,102 @@ x_actuators2 = (np.array(quad_positions2)+1)/2
 points_coord2 = x_actuators2 - 1
 quad_indices2 = func_quad_indices(quad_positions2, cols)
 
-
 start_time = time.time()  # Record start time
-with mujoco.viewer.launch_passive(model, data) as viewer:
-    viewer.cam.lookat[0] = 0.5  # Move camera target in the x-direction
-    viewer.cam.lookat[1] = -0.65  # Move camera target in the y-direction
-    viewer.cam.lookat[2] = 1  # Move camera target in the z-direction
-    viewer.cam.distance = 2.0  # Zoom out
-    viewer.cam.azimuth = 90  # Change azimuth angle
-    viewer.cam.elevation = -30  # Change elevation angle
+for time_num in range(5*iter):
+    if time_num%delta_factor ==0:
+        print(time_num / (5 * iter) * 100)
+        states = data.xpos
+        vels = data.cvel
+        combined = np.hstack((states[indices], vels[indices,:3]))
+        x = combined.flatten().reshape(-1, 1)
 
-    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = 0
-    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = 0
+        xd_pos = np.reshape(np.array([xd[::6], xd[1::6], xd[2::6]]), (3, n_points * n_points2)).reshape(-1, 1, order='F')
+        u_shape = shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, xd_pos, n_points * n_points2, shape, R_d, s_d, c_0)
+        xd_pos = xd_pos + u_shape * factor * delta
 
-    while viewer.is_running() and data.time <= total_time:
-        step_start = time.time()
+        combined2 = np.hstack((np.reshape(xd_pos, (n_points*n_points2, -1)), np.reshape(factor * u_shape, (n_points*n_points2, -1))))
+        xd = combined2.flatten().reshape(-1, 1)
 
-        if time_num%delta_factor ==0:
+        points = np.array([states[i] for i in quad_indices2])
 
-            states = data.xpos
-            vels = data.cvel
-            combined = np.hstack((states[indices], vels[indices,:3]))
-            x = combined.flatten().reshape(-1, 1)
+        flysurf.update(points_coord2, points)
 
-            xd_pos = np.reshape(np.array([xd[::6], xd[1::6], xd[2::6]]), (3, n_points * n_points2)).reshape(-1, 1, order='F')
-            u_shape = shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, xd_pos, n_points * n_points2, shape, R_d, s_d, c_0)
-            xd_pos = xd_pos + u_shape * factor * delta
+        xe_pos = sampling_v1(fig, ax, flysurf, n_points2 , points, plot=False)
 
-            combined2 = np.hstack((np.reshape(xd_pos, (n_points*n_points2, -1)), np.reshape(factor * u_shape, (n_points*n_points2, -1))))
-            xd = combined2.flatten().reshape(-1, 1)
-
-            points = np.array([states[i] for i in quad_indices2])
-
-            flysurf.update(points_coord2, points)
-
-            xe_pos = sampling_v1(fig, ax, flysurf, n_points2 , points, plot=False)
-
-            '''
-            ax.clear()
-            colors = ['r', 'b', 'y', 'y', 'm', 'c', 'k', 'orange', 'purple', 'lime', 'brown']
-            
-            ax.plot(xe_pos[:, 0],
-                    xe_pos[:, 1],
-                    xe_pos[:, 2],
-                    color='r')
-            for i in range(n_points2):
-                start_idx = i * n_points
-                end_idx = (i + 1) * n_points
-                color = colors[i % len(colors)]  # Cycle through colors if there are more segments than colors
-                ax.plot(xe_pos[start_idx:end_idx, 0],
-                        xe_pos[start_idx:end_idx, 1],
-                        xe_pos[start_idx:end_idx, 2],
-                        color = color)
-                ax.scatter(xe_pos[start_idx:end_idx, 0],
-                           xe_pos[start_idx:end_idx, 1],
-                           xe_pos[start_idx:end_idx, 2],
-                           color=color, marker='*')
-    
-            plt.pause(0.01)
-            '''
-            combined = np.hstack((xe_pos, vels[indices,:3]))
-            xe = combined.flatten().reshape(-1, 1)
-
-            u2 = np.dot(K, (xd-xe))
-
-            u = u2 + u_Forces  # Compute control inputs for all drones
-
-            # Enforce actuator limits
-            for kv in range(1, n_actuators + 1):
-                u[3 * kv - 3] = np.clip(u[3 * kv - 3], u_lim_M[0], u_lim_M[1])
-                u[3 * kv - 2] = np.clip(u[3 * kv - 2], u_lim_M[0], u_lim_M[1])
-                u[3 * kv - 1] = np.clip(u[3 * kv - 1], u_lim_T[0], u_lim_T[1])
-
-            data.ctrl[:] = u.flatten()
-            u_save[:, int(time_num/delta_factor)] = u2.flatten()
-            x_save[:, int(time_num/delta_factor)] = x.flatten()
-            xe_save[:, int(time_num/delta_factor)] = xe.flatten()
-            xd_save[:, int(time_num/delta_factor)] = xd.flatten()
-
-        mujoco.mj_step(model, data)
-
-        with viewer.lock():
-            viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = int(data.time % 2)
-
-        # Render the simulation scene
-        if time_num % 4 == 0:
-            viewer.sync()
-
-        time_until_next_step = model.opt.timestep - (time.time() - step_start)
-        if time_until_next_step > 0:
-            time.sleep(time_until_next_step)
-
-        time_num += 1
-
-        if time_num >= time_step_num:
-            break
-        if time_change == 1.0 * time_num*model.opt.timestep:
-            shape = shape_gaussian
-        if 2.0*time_change == time_num*model.opt.timestep:
-            R_d = rotation_matrix(np.pi / 4, 0, 0)
-            factor = 0.25
         '''
-        if (3.0 * time_change < time_num*model.opt.timestep) & (4.0 * time_change > time_num*model.opt.timestep):
-            c_0_x = 0.5 *  np.cos((time_num - 3.0 * (time_change/model.opt.timestep)) /(time_change/model.opt.timestep) * np.pi) - 1
-            c_0_y = 0.5 * np.sin((time_num- 3.0 * (time_change/model.opt.timestep)) /(time_change/model.opt.timestep) * np.pi)
-            c_0 = np.array([c_0_x, c_0_y, 0.7])
-            factor = 1.5
-        '''
-        '''
-        if 1*time_change == time_num*model.opt.timestep:
-            x1 = (x_g_vector0.reshape(-1, 1) - xd[::6])/(1.5*time_change/model.opt.timestep)
-            y1 = (y_g_vector0.reshape(-1, 1) - xd[1::6])/(1.5*time_change/model.opt.timestep)
-            z1 = (z_g_vector0.reshape(-1, 1) - xd[2::6])/(1.5*time_change/model.opt.timestep)
-        if 1*time_change< time_num*model.opt.timestep < 1.5*time_change:
-            xd[::6] = xd[::6] + x1
-            xd[1::6] = xd[1::6] + y1
-            xd[2::6] = xd[2::6] + z1
-        if 2*time_change< time_num*model.opt.timestep < 2.6*time_change:
-            xd[2::6] = xd[2::6] + 0.75 / (time_change/model.opt.timestep)
-            xd[::6] = xd[::6] + 0.75 /  (time_change/model.opt.timestep)
+        ax.clear()
+        colors = ['r', 'b', 'y', 'y', 'm', 'c', 'k', 'orange', 'purple', 'lime', 'brown']
         
-        if time_num ==1:
-            for i in range(7):
-                time.sleep(1.0)
-                print(i)
+        ax.plot(xe_pos[:, 0],
+                xe_pos[:, 1],
+                xe_pos[:, 2],
+                color='r')
+        for i in range(n_points2):
+            start_idx = i * n_points
+            end_idx = (i + 1) * n_points
+            color = colors[i % len(colors)]  # Cycle through colors if there are more segments than colors
+            ax.plot(xe_pos[start_idx:end_idx, 0],
+                    xe_pos[start_idx:end_idx, 1],
+                    xe_pos[start_idx:end_idx, 2],
+                    color = color)
+            ax.scatter(xe_pos[start_idx:end_idx, 0],
+                       xe_pos[start_idx:end_idx, 1],
+                       xe_pos[start_idx:end_idx, 2],
+                       color=color, marker='*')
+
+        plt.pause(0.01)
         '''
+        combined = np.hstack((xe_pos, vels[indices,:3]))
+        xe = combined.flatten().reshape(-1, 1)
+
+        u2 = np.dot(K, (xd-xe))
+
+        u = u2 + u_Forces  # Compute control inputs for all drones
+
+        # Enforce actuator limits
+        for kv in range(1, n_actuators + 1):
+            u[3 * kv - 3] = np.clip(u[3 * kv - 3], u_lim_M[0], u_lim_M[1])
+            u[3 * kv - 2] = np.clip(u[3 * kv - 2], u_lim_M[0], u_lim_M[1])
+            u[3 * kv - 1] = np.clip(u[3 * kv - 1], u_lim_T[0], u_lim_T[1])
+
+        data.ctrl[:] = u.flatten()
+        u_save[:, int(time_num/delta_factor)] = u2.flatten()
+        x_save[:, int(time_num/delta_factor)] = x.flatten()
+        xe_save[:, int(time_num/delta_factor)] = xe.flatten()
+        xd_save[:, int(time_num/delta_factor)] = xd.flatten()
+
+    mujoco.mj_step(model, data)
+
+    if time_change == 1.0 * time_num*model.opt.timestep:
+        shape = shape_gaussian
+    if 2.0*time_change == time_num*model.opt.timestep:
+        R_d = rotation_matrix(np.pi / 4, 0, 0)
+        factor = 0.3
+    '''
+    if (3.0 * time_change < time_num*model.opt.timestep) & (4.0 * time_change > time_num*model.opt.timestep):
+        c_0_x = 0.5 *  np.cos((time_num - 3.0 * (time_change/model.opt.timestep)) /(time_change/model.opt.timestep) * np.pi) - 1
+        c_0_y = 0.5 * np.sin((time_num- 3.0 * (time_change/model.opt.timestep)) /(time_change/model.opt.timestep) * np.pi)
+        c_0 = np.array([c_0_x, c_0_y, 0.7])
+        factor = 1.5
+    '''
+    '''
+    if 1*time_change == time_num*model.opt.timestep:
+        x1 = (x_g_vector0.reshape(-1, 1) - xd[::6])/(1.5*time_change/model.opt.timestep)
+        y1 = (y_g_vector0.reshape(-1, 1) - xd[1::6])/(1.5*time_change/model.opt.timestep)
+        z1 = (z_g_vector0.reshape(-1, 1) - xd[2::6])/(1.5*time_change/model.opt.timestep)
+    if 1*time_change< time_num*model.opt.timestep < 1.5*time_change:
+        xd[::6] = xd[::6] + x1
+        xd[1::6] = xd[1::6] + y1
+        xd[2::6] = xd[2::6] + z1
+    if 2*time_change< time_num*model.opt.timestep < 2.6*time_change:
+        xd[2::6] = xd[2::6] + 0.75 / (time_change/model.opt.timestep)
+        xd[::6] = xd[::6] + 0.75 /  (time_change/model.opt.timestep)
+    
+    if time_num ==1:
+        for i in range(7):
+            time.sleep(1.0)
+            print(i)
+    '''
 end_time = time.time()  # Record end time
 elapsed_time = end_time - start_time  # Calculate elapsed time
 
