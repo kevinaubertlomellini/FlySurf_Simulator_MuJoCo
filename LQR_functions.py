@@ -238,3 +238,51 @@ def k_dlqr(n_points,n_points2,k,k2,k3,c1,c2,l0,m,m_uav,x_actuators,x,Q,R,n_visib
     K = np.round(K, 6)
 
     return K
+
+def k_dlqr_V2(n_points,n_points2,k,k2,k3,c1,c2,l0,mass_points, m_uav,x_actuators,x,Q_vector,R_vector,delta):
+
+
+    n_actuators = x_actuators.shape[0]
+    n_visible_points = n_actuators
+    x_actuators_2 = np.zeros((n_actuators, 3))
+    m = mass_points * np.ones((n_points, n_points2))
+    for i in range(n_actuators):
+        m[x_actuators[i, 0] - 1, x_actuators[i, 1] - 1] = m_uav
+        x_actuators_2[i, 0] = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 1
+        x_actuators_2[i, 1] = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 2
+        x_actuators_2[i, 2] = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 3
+
+    A = A_linearized(x * 1.02, k, k2,k3, c1, c2, m, l0, n_points, n_points2)
+    B = np.zeros((n_points * n_points2 * 6, 3 * n_actuators))
+    B_matrix_3 = np.eye(3)
+    for i in range(n_actuators):
+        B[6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 3:6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 6, 3 * i:3 * (i + 1)] = B_matrix_3
+
+    # Control parameters
+
+    C = np.zeros((6 * n_visible_points, 6 * n_points * n_points2))
+    D = np.zeros((6*n_visible_points, 3*n_actuators))
+
+    sys_continuous = signal.StateSpace(A, B, C, D)
+    sys_discrete = sys_continuous.to_discrete(delta, method='zoh')
+
+    # Extract the discrete-time system matrices A_d and B_d
+    A_d, B_d = sys_discrete.A, sys_discrete.B
+
+    Q = Q_vector[4] * np.eye(6 * n_points * n_points2)  # velocity in z
+    for yu in range(1, n_points * n_points2 + 1):
+        Q[6 * yu - 4, 6 * yu - 4] = Q_vector[1]  # Altitude z
+        Q[6 * yu - 6:6 * yu - 4, 6 * yu - 6:6 * yu - 4] = Q_vector[0]* np.eye(2)  # x and y
+        Q[6 * yu - 3:6 * yu - 1, 6 * yu - 3:6 * yu - 1] = Q_vector[3] * np.eye(2)  # velocity in x and y
+    R = R_vector[1] * np.eye(3 * n_actuators)  # force in z
+    for yi in range(n_actuators):
+        R[3 * yi + 1:3 * yi + 3, 3 * yi + 1:3 * yi + 3] =R_vector[0]* np.eye(2)  # force in x and y
+
+    # LQR Calculation
+    P = solve_discrete_are(A_d, B_d, Q, R)
+    # Compute the LQR gain
+    K = np.linalg.inv(B_d.T @ P @ B_d + R) @ (B_d.T @ P @ A_d)
+    # Round the gain matrix to 6 decimal places
+    K = np.round(K, 6)
+
+    return K

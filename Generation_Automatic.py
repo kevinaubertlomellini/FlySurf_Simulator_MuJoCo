@@ -1,7 +1,8 @@
 from scipy.sparse.csgraph import structural_rank
 import math
+import mujoco
 
-def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, delta, file_path):
+def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, delta, u_limits, file_path):
     """
     Generates XML for a grid of rows and columns with specified spacing and saves it to a file.
 
@@ -18,6 +19,10 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
     Returns:
         None
     """
+    # Order quad_positions
+    quad_positions_ordered = sorted(quad_positions, key=lambda x: (x[1], x[0]))
+
+
     # Calculate spacing based on the total lengths and number of rows/columns
     x_spacing = x_length / (cols - 1)  # Adjusted for the correct number of divisions
     y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of divisions
@@ -82,7 +87,7 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
 
             # Check if the current position is in the quad_positions list
             # <joint type="free" damping="{damp_point}"/>
-            if [row + 1, col + 1] in quad_positions:  # Positions are 1-indexed
+            if [row + 1, col + 1] in quad_positions_ordered:  # Positions are 1-indexed
                 body_template = f"""
     <body name="quad_{element_counter}" pos="{x_pos:.4f} {y_pos:.4f} 0.05" childclass="x2">
         <joint type="free" damping="{damp_point}"/>
@@ -97,9 +102,9 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
     """
                 # Add actuator for each quad
                 actuator_output.append(f"""
-    <motor class="x2" name="thrust{element_counter}_x" site="ball_{row + 1}_{col + 1}" gear="1 0 0 0 0 0" ctrlrange="-100.0 100.0"/>
-    <motor class="x2" name="thrust{element_counter}_y" site="ball_{row + 1}_{col + 1}" gear="0 1 0 0 0 0" ctrlrange="-100.0 100.0"/>
-    <motor class="x2" name="thrust{element_counter}_z" site="ball_{row + 1}_{col + 1}" gear="0 0 1 0 0 0" ctrlrange="0.0 100.0"/>""")
+    <motor class="x2" name="thrust{element_counter}_x" site="ball_{row + 1}_{col + 1}" gear="1 0 0 0 0 0" ctrlrange="{u_limits[0, 0]} {u_limits[0, 1]} "/>
+    <motor class="x2" name="thrust{element_counter}_y" site="ball_{row + 1}_{col + 1}" gear="0 1 0 0 0 0" ctrlrange="{u_limits[1, 0]} {u_limits[1, 1]}"/>
+    <motor class="x2" name="thrust{element_counter}_z" site="ball_{row + 1}_{col + 1}" gear="0 0 1 0 0 0" ctrlrange="{u_limits[2, 0]} {u_limits[2, 1]}"/>""")
                 element_counter += 1
             else:
                 body_template = f"""
@@ -173,19 +178,7 @@ def generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions,
         file.write(xml_content)
     print(f"XML file saved to {file_path}")
 
-
-# Configuration
-if __name__ == "__main__":
-    rows = 9  # Number of rows
-    cols = 9  # Number of columns
-    x_init = 0.0
-    y_init = -0.5
-    x_length = 1  # Total length in x direction
-    y_length = 1  # Total length in y direction
-    str_stif = 1.35
-    shear_stif = 1.35
-    flex_stif = 1.35
-    quad_positions = [[1, 1], [9, 1], [1, 9], [9, 9]]  # List of positions with special elements
-    file_path = "config_FlySurf_Simulator.xml"  # Output file name
-
-    generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, str_stif, shear_stif, flex_stif, file_path)
+    model = mujoco.MjModel.from_xml_path(file_path)
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    return [model, data]

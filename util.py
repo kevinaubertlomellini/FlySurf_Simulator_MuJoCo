@@ -240,7 +240,8 @@ def rotation_matrix(roll, pitch, yaw):
     return R
 
 def init_simulator(quad_positions):
-    x_actuators = ((np.array(quad_positions) + 1) / 2).astype(int)
+    quad_positions_ordered = sorted(quad_positions, key=lambda x: (x[1], x[0]))
+    x_actuators = ((np.array(quad_positions_ordered) + 1) / 2).astype(int)
     n_actuators = x_actuators.shape[0]
     return [x_actuators, n_actuators]
 
@@ -277,3 +278,74 @@ def u_gravity_forces(n_UAVs, mass_points, mass_UAVs , rows, cols, g):
             forces = np.array([0, 0, ((cols * rows) * mass_points / 2 + mass_UAVs- mass_points * n_UAVs) * g])
         u_Forces[3 * kv - 3:3 * kv, 0] = forces.flatten()
     return u_Forces
+
+def init_vectors(n_actuators, n_points, iter):
+    u_save = np.zeros((3 * n_actuators, iter))
+    x_save = np.zeros((6 * n_points[0] * n_points[1], iter))
+    xd_save = np.zeros((6 * n_points[0] * n_points[1], iter))
+    xe_save = np.zeros((6 * n_points[0] * n_points[1], iter))
+    return [u_save, x_save, xd_save, xe_save]
+
+def plot_errors(iter, delta, x_save, xd_save, xe_save):
+
+    t = np.arange(0, iter * delta, delta)
+
+    e_save = np.zeros((iter,1))
+    e_save2 = np.zeros((iter,1))
+    e_est_save = np.zeros((iter,1))
+    e_est_save2 = np.zeros((iter,1))
+    e_real_save = np.zeros((iter,1))
+    e_real_save2 = np.zeros((iter,1))
+
+    for i in range(iter):
+        pos = np.array([x_save[::6, i], x_save[1::6, i], x_save[2::6, i]]).T
+        pos_e = np.array([xe_save[::6, i], xe_save[1::6, i], xe_save[2::6, i]]).T
+        pos_d = np.array([xd_save[::6, i], xd_save[1::6, i], xd_save[2::6, i]]).T
+        e_save[i] = average_hausdorff_distance(pos_e, pos_d)
+        e_save2[i] = np.mean(np.linalg.norm(pos_e - pos_d, axis=1))
+        e_est_save[i] = average_hausdorff_distance(pos_e, pos)
+        e_est_save2[i] = np.mean(np.linalg.norm(pos_e - pos, axis=1))
+        e_real_save[i] = average_hausdorff_distance(pos, pos_d)
+        e_real_save2[i] = np.mean(np.linalg.norm(pos - pos_d, axis=1))
+
+    # Create a figure with 3 subplots (vertically stacked)
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12))
+
+    # Plot 1: Error
+    axes[0].plot(t, e_save.flatten(), linewidth=1.5, label='AHD')
+    axes[0].plot(t, e_save2.flatten(), linewidth=1.5, label='ED')
+    axes[0].set_xlabel("Time (s)")
+    axes[0].set_ylabel("Error (m)")
+    axes[0].set_title("Error")
+    axes[0].legend()
+    axes[0].grid(True)
+
+    # Plot 2: Estimation Error
+    axes[1].plot(t, e_est_save.flatten(), linewidth=1.5, label='AHD')
+    axes[1].plot(t, e_est_save2.flatten(), linewidth=1.5, label='ED')
+    axes[1].set_xlabel("Time (s)")
+    axes[1].set_ylabel("Error (m)")
+    axes[1].set_title("Estimation Error")
+    axes[1].legend()
+    axes[1].grid(True)
+
+    # Plot 3: Real Error
+    axes[2].plot(t, e_real_save.flatten(), linewidth=1.5, label='AHD')
+    axes[2].plot(t, e_real_save2.flatten(), linewidth=1.5, label='ED')
+    axes[2].set_xlabel("Time (s)")
+    axes[2].set_ylabel("Error (m)")
+    axes[2].set_title("Real Error")
+    axes[2].legend()
+    axes[2].grid(True)
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+
+
+def points_coord_estimator(quad_positions, rows, cols):
+    quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols], [7,7],[int((rows - 1) / 2) + 1, int((cols - 1) / 2) + 1]]
+    #quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols]]
+    x_actuators2 = (np.array(quad_positions2) + 1) / 2
+    points_coord2 = x_actuators2 - 1
+    quad_indices2 = func_quad_indices(quad_positions2, cols)
+    return [points_coord2, quad_indices2]
