@@ -241,7 +241,7 @@ def rotation_matrix(roll, pitch, yaw):
 
 def init_simulator(quad_positions):
     quad_positions_ordered = sorted(quad_positions, key=lambda x: (x[1], x[0]))
-    x_actuators = ((np.array(quad_positions_ordered) + 1) / 2).astype(int)
+    x_actuators = ((np.array(quad_positions_ordered))).astype(int)
     n_actuators = x_actuators.shape[0]
     return [x_actuators, n_actuators]
 
@@ -272,10 +272,14 @@ def shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
 def u_gravity_forces(n_UAVs, mass_points, mass_UAVs , rows, cols, g):
     u_Forces = np.zeros((3 * n_UAVs, 1))
     for kv in range(1, n_UAVs + 1):
+        forces = np.array([0, 0, ((cols * rows) * mass_points / n_UAVs + mass_UAVs - mass_points * n_UAVs) * g])
+        #forces = np.array([0, 0, mass_points*g])
+        '''
         if kv != 3:
             forces = np.array([0, 0, ((cols * rows) * mass_points / 8 + mass_UAVs- mass_points * n_UAVs) * g])
         else:
             forces = np.array([0, 0, ((cols * rows) * mass_points / 2 + mass_UAVs- mass_points * n_UAVs) * g])
+        '''
         u_Forces[3 * kv - 3:3 * kv, 0] = forces.flatten()
     return u_Forces
 
@@ -342,10 +346,9 @@ def plot_errors(iter, delta, x_save, xd_save, xe_save):
     plt.tight_layout()
 
 
-def points_coord_estimator(quad_positions, rows, cols):
-    quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols], [7,7],[int((rows - 1) / 2) + 1, int((cols - 1) / 2) + 1]]
+def points_coord_estimator(quad_positions2, rows, cols, spacing_factor):
     #quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols]]
-    x_actuators2 = (np.array(quad_positions2) + 1) / 2
+    x_actuators2 = (np.array(quad_positions2)) / spacing_factor
     points_coord2 = x_actuators2 - 1
     quad_indices2 = func_quad_indices(quad_positions2, cols)
     return [points_coord2, quad_indices2]

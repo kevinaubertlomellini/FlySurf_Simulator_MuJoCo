@@ -7,7 +7,7 @@ import time
 from Generation_Automatic import *
 from catenary_flysurf import *
 from util import *
-from LQR_functions import *
+from LQR_MPC_functions import *
 
 # FLYSURF SIMULATOR PARAMETERS
 rows = 21# Number of rows
@@ -20,7 +20,7 @@ str_stif = 0.025 # Stifness of structural springs
 shear_stif = 0.005 # Stifness of shear springs
 flex_stif = 0.005 # Stifness of flexion springs
 g = 9.81 # Gravity value
-quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[7,7]]  # UAVs positions in the grid simulator
+quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[3,int((cols-1)/2)+1]]  # UAVs positions in the grid simulator
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 mass_points = 0.0025 # Mass of each point0
 mass_quads = 0.32 # Mass of each UAV
@@ -90,13 +90,17 @@ for i in range(1,n_points+1):
 
 flysurf = CatenaryFlySurf(n_points2, n_points, l0+0.0011, num_sample_per_curve=n_points2)
 
-[points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
+quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols],
+                   [int((rows - 1) / 2) + 1, int((cols - 1) / 2) + 1],[3,int((cols+1)/2)]]
+
+[points_coord2, quad_indices2] = points_coord_estimator(quad_positions2, rows, cols)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
 start_time = time.time()  # Record start time
 time_num = 0
+
 with mujoco.viewer.launch_passive(model, data) as viewer:
     viewer.cam.lookat = [0.5, -0.65, 1]  # Move camera target in the [x, y, z] direction
     viewer.cam.distance = 2.0  # Zoom out
@@ -121,9 +125,13 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             xd = combined2.flatten().reshape(-1, 1)
 
             points = np.array([states[i] for i in quad_indices2])
-            flysurf.update(points_coord2, points)
 
-            xe_pos = sampling_v1(fig, ax, flysurf, n_points2 , points, plot=False)
+            if time_num==0:
+                flysurf.update(points_coord2, points)
+                sampler = FlysurfSampler(flysurf, n_points, points)
+
+            sampler.flysurf.update(points_coord2, points)
+            xe_pos = sampler.sampling_v1(fig, ax, points, plot=False)
             combined = np.hstack((xe_pos, vels[indices,:3]))
             xe = combined.flatten().reshape(-1, 1)
 

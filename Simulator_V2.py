@@ -8,7 +8,7 @@ import time
 from Generation_Automatic import *
 from catenary_flysurf import *
 from util import *
-from LQR_functions import *
+from LQR_MPC_functions import *
 
 # SHAPE PLANNER ADDED
 
