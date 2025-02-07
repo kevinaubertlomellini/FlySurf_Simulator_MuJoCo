@@ -415,8 +415,8 @@ def init_MPC_model2(x2, k,k2,k3,c1,c2,l0, n_points, n_points2, n_actuators, x_ac
     mpc = do_mpc.controller.MPC(model)
 
     setup_mpc = {
-        'n_horizon': 10,  # Prediction horizon
-        't_step': 100*delta,
+        'n_horizon': 50,  # Prediction horizon
+        't_step': delta,
         'state_discretization': 'collocation',
         'collocation_type': 'radau',
         'open_loop': 0,   # Closed-loop MPC

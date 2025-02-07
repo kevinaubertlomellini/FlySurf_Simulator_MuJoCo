@@ -8,7 +8,7 @@ import do_mpc
 import casadi as ca
 
 from Generation_Automatic import *
-from catenary_flysurf import *
+from flysurf_catenary_estimator.catenary_flysurf import *
 from util import *
 from LQR_MPC_functions import *
 
@@ -23,13 +23,13 @@ str_stif = 0.025 # Stifness of structural springs
 shear_stif = 0.005 # Stifness of shear springs
 flex_stif = 0.005 # Stifness of flexion springs
 g = 9.81 # Gravity value
-#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]  # UAVs positions in the grid simulator
-quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
+quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]  # UAVs positions in the grid simulator
+#quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 mass_points = 0.0025 # Mass of each point0
 mass_quads = 0.05 # Mass of each UAV
 damp_point = 0.01 # Damping coefficient on each point
 damp_quad = 0.6 # Damping coefficient on each UAV
-T_s = 0.0025 # Simulator step
+T_s = 0.002 # Simulator step
 u_limits = 10*np.array([[-1.0, 1.0], [-1.0, 1.0], [-0.1, 1.0]]) # Actuator limits
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
 
@@ -44,7 +44,7 @@ y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of division
 
 delta_factor = 5
 delta = delta_factor*T_s
-time_change = 5
+time_change = 4
 n_tasks = 1
 total_time = time_change*n_tasks
 time_step_num = round(total_time / T_s)
@@ -95,9 +95,7 @@ print('i',indices)
 
 flysurf = CatenaryFlySurf(n_points2, n_points, l0+0.0011, num_sample_per_curve=n_points2)
 
-quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols]]
-
-[points_coord2, quad_indices2] = points_coord_estimator(quad_positions2, rows, cols, spacing_factor)
+[points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols, spacing_factor)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
@@ -156,9 +154,14 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             xe = combined.flatten().reshape(-1, 1)
 
 
+            start_time = time.time()  # Record start time
             p_mpc_template['_p'] = xd
             mpc.set_p_fun(lambda t_now: p_mpc_template)
-            u_mpc = 7*mpc.make_step(xe)
+            u_mpc = 7 * mpc.make_step(xe)
+            end_time = time.time()  # Record end time
+            elapsed_time = end_time - start_time  # Calculate elapsed time
+
+            print(f"Step time: {elapsed_time:.3f} seconds")
             #u_mpc[2::3] = 5*u_mpc[2::3]
             u = u_mpc + u_gravity # Compute control inputs for all drones
 
@@ -195,12 +198,13 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             shape = shape_gaussian
         if 2.0*time_change == time_num*model.opt.timestep:
             R_d = rotation_matrix(np.pi / 4, 0, 0)
-            factor = 0.25
+            factor = 0.5
+        '''
+        if time_num ==1:
+            time.sleep(10.0)
+        '''
 
-end_time = time.time()  # Record end time
-elapsed_time = end_time - start_time  # Calculate elapsed time
 
-print(f"Simulation time: {elapsed_time:.3f} seconds")
 t = np.arange(0, iter * delta, delta)
 cmap = plt.get_cmap("tab10")
 

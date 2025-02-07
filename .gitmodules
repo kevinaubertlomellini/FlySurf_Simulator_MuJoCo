@@ -1,0 +1,3 @@
+[submodule "flysurf_catenary_estimator"]
+	path = flysurf_catenary_estimator
+	url = git@github.com:Jarvis-X/flysurf_catenary_estimator.git
