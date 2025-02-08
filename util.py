@@ -239,9 +239,10 @@ def rotation_matrix(roll, pitch, yaw):
     R = Rz @ Ry @ Rx
     return R
 
-def init_simulator(quad_positions):
+def init_simulator(quad_positions, spacing_factor):
     quad_positions_ordered = sorted(quad_positions, key=lambda x: (x[1], x[0]))
-    x_actuators = ((np.array(quad_positions_ordered))).astype(int)
+    print(quad_positions_ordered)
+    x_actuators = ((np.array(quad_positions_ordered)+spacing_factor)/(spacing_factor+1)).astype(int)
     n_actuators = x_actuators.shape[0]
     return [x_actuators, n_actuators]
 
@@ -346,9 +347,12 @@ def plot_errors(iter, delta, x_save, xd_save, xe_save):
     plt.tight_layout()
 
 
-def points_coord_estimator(quad_positions2, rows, cols, spacing_factor):
-    #quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols]]
-    x_actuators2 = (np.array(quad_positions2)) / spacing_factor
+def points_coord_estimator(quad_positions, rows, cols):
+    quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols]]
+    for quad_pos in quad_positions:
+        if quad_pos not in quad_positions2:
+            quad_positions2.append(quad_pos)
+    x_actuators2 = (np.array(quad_positions2))
     points_coord2 = x_actuators2 - 1
     quad_indices2 = func_quad_indices(quad_positions2, cols)
     return [points_coord2, quad_indices2]

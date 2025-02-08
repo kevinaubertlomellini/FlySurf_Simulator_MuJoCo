@@ -13,7 +13,7 @@ from util import *
 from LQR_MPC_functions import *
 
 # FLYSURF SIMULATOR PARAMETERS
-rows = 5# Number of rows
+rows = 17# Number of rows (n-1)/(spacing+1)
 cols = rows # Number of columns
 x_init = -0.5 # Position of point in x (1,1)
 y_init = -0.5 # Position of point in y (1,1)
@@ -23,36 +23,37 @@ str_stif = 0.025 # Stifness of structural springs
 shear_stif = 0.005 # Stifness of shear springs
 flex_stif = 0.005 # Stifness of flexion springs
 g = 9.81 # Gravity value
-quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]  # UAVs positions in the grid simulator
+#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
+quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 mass_points = 0.0025 # Mass of each point0
 mass_quads = 0.05 # Mass of each UAV
 damp_point = 0.01 # Damping coefficient on each point
 damp_quad = 0.6 # Damping coefficient on each UAV
-T_s = 0.002 # Simulator step
+T_s = 0.001 # Simulator step
 u_limits = 10*np.array([[-1.0, 1.0], [-1.0, 1.0], [-0.1, 1.0]]) # Actuator limits
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
 
 # Generate xml simulation  file
 [model, data] = generate_xml(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, T_s, u_limits*1.01, file_path)
 
-[x_actuators, n_actuators] = init_simulator(quad_positions)
+spacing_factor = 3
+[x_actuators, n_actuators] = init_simulator(quad_positions, spacing_factor)
 print(x_actuators)
 
 x_spacing = x_length / (cols - 1)  # Adjusted for the correct number of divisions
 y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of divisions
 
-delta_factor = 5
+delta_factor = 20
 delta = delta_factor*T_s
-time_change = 4
+time_change = 5
 n_tasks = 1
 total_time = time_change*n_tasks
 time_step_num = round(total_time / T_s)
 
-spacing_factor = 1
-n_points = int((rows)/spacing_factor)
-n_points2 = int((cols)/spacing_factor)
-l0= spacing_factor*x_spacing
+n_points = int((rows + spacing_factor)/(spacing_factor+1))
+n_points2 = int((cols+ spacing_factor)/(spacing_factor+1))
+l0= (spacing_factor+1)*x_spacing
 iter = int(time_step_num/delta_factor)
 
 [u_save, x_save, xd_save, xe_save] = init_vectors(n_actuators, [n_points, n_points2], iter)
@@ -83,19 +84,23 @@ alpha_Hd = 3
 shape = np.reshape(np.array([x[::6],x[1::6],x[2::6]]),(3, n_points * n_points2)).reshape(-1,1, order='F')
 R_d = rotation_matrix(0, 0, 0)
 s_d = 1
-c_0 = np.array([0.3, 0.2, 0.5])
+c_0 = np.array([0.0, 0.0, 0.5])
 factor=0.6
 shape_gaussian = shape_gaussian_mesh(sides=[0.8, 0.8], amplitude=1.12, center=[0.0, 0.0], sd = [0.575, 0.575], n_points = [n_points, n_points2])
 
 indices = []
 for i in range(1,n_points+1):
     for j in range(1,n_points2+1):
-        indices.append(int((spacing_factor*i-spacing_factor)*rows + (spacing_factor*j)))
+        row_equal = i*(spacing_factor+1) - spacing_factor
+        col_equal = j*(spacing_factor+1) - spacing_factor
+        indices.append((row_equal-1)*cols+col_equal)
 print('i',indices)
+indices2 = [i-1 for i in indices]
 
-flysurf = CatenaryFlySurf(n_points2, n_points, l0+0.0011, num_sample_per_curve=n_points2)
+flysurf = CatenaryFlySurf(rows, cols, x_spacing + 0.001, num_sample_per_curve=rows)
 
-[points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols, spacing_factor)
+[points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
+print(quad_indices2)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
@@ -115,7 +120,7 @@ mpc.setup()
 mpc.x0 = x
 mpc.set_initial_guess()
 u_mpc = mpc.make_step(x)
-print(u_mpc)
+#print(u_mpc)
 
 with mujoco.viewer.launch_passive(model, data) as viewer:
     viewer.cam.lookat = [0, -0.65, 1]  # Move camera target in the [x, y, z] direction
@@ -146,11 +151,11 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             if time_num==0:
                 flysurf.update(points_coord2, points)
-                sampler = FlysurfSampler(flysurf, n_points, points)
+                sampler = FlysurfSampler(flysurf, rows, points)
 
             sampler.flysurf.update(points_coord2, points)
             xe_pos = sampler.sampling_v1(fig, ax, points, plot=False)
-            combined = np.hstack((xe_pos, vels[indices,:3]))
+            combined = np.hstack((xe_pos[indices2], vels[indices,:3]))
             xe = combined.flatten().reshape(-1, 1)
 
 
