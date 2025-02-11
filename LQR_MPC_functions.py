@@ -449,7 +449,7 @@ def init_MPC_model2(x2, k, k2, k3, c1, c2, l0,
 
     # Define the system model
     model_type = 'discrete'
-    model = do_mpc.model.Model(model_type)
+    model = do_mpc.model.LinearModel(model_type)
 
     # Define state (x) and control (u) variables
     x = model.set_variable(var_type='_x', var_name='x', shape=(6 * n_points * n_points2, 1))  # [position, velocity]
@@ -472,18 +472,17 @@ def init_MPC_model2(x2, k, k2, k3, c1, c2, l0,
         'n_horizon': 10,  # Prediction horizon
         't_step': mpc_dt,
         'state_discretization': 'discrete',
-        # 'collocation_type': 'radau',
         'open_loop': 0,  # Closed-loop MPC
         'store_full_solution': False,
-        # 'nlpsol': 'qpsol',
         'nlpsol_opts': {
-            'jit': True,
+            # 'jit': True,
             'ipopt.tol': 1e-3,
             'ipopt.max_iter': 1000,
-            'ipopt.print_level': 0,  # Disable IPOPT printing
+            # 'ipopt.print_level': 0,  # Disable IPOPT printing
+            'ipopt.ma57_automatic_scaling': 'no',  # Enable MA57 auto scaling
             'ipopt.sb': 'yes',  # Enable silent barrier mode
-            'print_time': 0,  # Disable solver timing information
-            'ipopt.linear_solver': 'mumps'  # Use a faster linear solver
+            'print_time': 1,  # Disable solver timing information
+            'ipopt.linear_solver': 'ma27'  # Use a faster linear solver
         }
 
     }

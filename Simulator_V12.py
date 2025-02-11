@@ -15,7 +15,7 @@ from util import *
 from LQR_MPC_functions import *
 
 # FLYSURF SIMULATOR PARAMETERS
-rows = 17 # Number of rows (n-1)/(spacing+1)
+rows = 25 # Number of rows (n-1)/(spacing+1)
 cols = rows # Number of columns
 x_init = -0.5 # Position of point in x (1,1)
 y_init = -0.5 # Position of point in y (1,1)
@@ -83,7 +83,7 @@ xd[2::6] = 0
 xd_iter = xd.copy()
 
 # CONTROL PARAMETERS
-Q_vector = [5000, 5000, 0.2, 0.2] # [x and y, z, velocity in x and y, velocity in z]
+Q_vector = [10000, 10000, 0.2, 0.2] # [x and y, z, velocity in x and y, velocity in z]
 R_vector = [1, 2] # [force in x and y, force in z]
 
 u_gravity = u_gravity_forces(n_UAVs = n_actuators, mass_points = mass_points, mass_UAVs = mass_quads, rows =rows, cols=cols, g= g)
@@ -204,14 +204,10 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             xe_iter = np.hstack((xe_pos, vels[1::,:3])).flatten().reshape(-1, 1)
 
-            start_time = time.time()  # Record start time
             p_mpc_template['_p'] = xd
             mpc.set_p_fun(lambda t_now: p_mpc_template)
             u_mpc = mpc.make_step(xe)
-            end_time = time.time()  # Record end time
-            elapsed_time = end_time - start_time  # Calculate elapsed time
 
-            print(f"Step time: {elapsed_time:.3f} seconds")
             #u_mpc[2::3] = 5*u_mpc[2::3]
             u = u_mpc + u_gravity # Compute control inputs for all drones
 
