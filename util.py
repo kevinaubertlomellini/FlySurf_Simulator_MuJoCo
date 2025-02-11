@@ -321,7 +321,7 @@ def plot_errors(iter, delta, x_save, xd_save, xe_save):
     axes[0].plot(t, e_save2.flatten(), linewidth=1.5, label='ED')
     axes[0].set_xlabel("Time (s)")
     axes[0].set_ylabel("Error (m)")
-    axes[0].set_title("Error")
+    axes[0].set_title("Visible Error: AHD(x_e, x_d)")
     axes[0].legend()
     axes[0].grid(True)
 
@@ -330,7 +330,7 @@ def plot_errors(iter, delta, x_save, xd_save, xe_save):
     axes[1].plot(t, e_est_save2.flatten(), linewidth=1.5, label='ED')
     axes[1].set_xlabel("Time (s)")
     axes[1].set_ylabel("Error (m)")
-    axes[1].set_title("Estimation Error")
+    axes[1].set_title("Estimation Error: AHD(x, x_e)")
     axes[1].legend()
     axes[1].grid(True)
 
@@ -339,7 +339,7 @@ def plot_errors(iter, delta, x_save, xd_save, xe_save):
     axes[2].plot(t, e_real_save2.flatten(), linewidth=1.5, label='ED')
     axes[2].set_xlabel("Time (s)")
     axes[2].set_ylabel("Error (m)")
-    axes[2].set_title("Real Error")
+    axes[2].set_title("Real Error: AHD(x, x_d)")
     axes[2].legend()
     axes[2].grid(True)
 
@@ -356,3 +356,96 @@ def points_coord_estimator(quad_positions, rows, cols):
     points_coord2 = x_actuators2 - 1
     quad_indices2 = func_quad_indices(quad_positions2, cols)
     return [points_coord2, quad_indices2]
+
+
+def plot_forces(t, u_save):
+    """
+    Plots the forces over time as three subplots for x, y, and z components.
+
+    Parameters:
+    u_save (numpy array): A 2D array of shape (3 * n_actuators, iter),
+                          where each column represents the forces at a given time step.
+    """
+    if u_save.ndim != 2:
+        raise ValueError("Input u_save must be a 2D array of shape (3 * n_actuators, iter).")
+
+    n_actuators = u_save.shape[0] // 3  # Number of actuators
+    iter_count = u_save.shape[1]  # Number of time steps
+    time_steps = np.arange(iter_count)
+
+    # Extract force components
+    forces_x = u_save[0::3, :]
+    forces_y = u_save[1::3, :]
+    forces_z = u_save[2::3, :]
+
+    # Plot forces over time
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+
+    for i in range(n_actuators):
+        axes[0].plot(t, forces_x[i, :], label=f"Actuator {i + 1}")
+        axes[1].plot(t, forces_y[i, :], label=f"Actuator {i + 1}")
+        axes[2].plot(t, forces_z[i, :], label=f"Actuator {i + 1}")
+
+    # Labels and legends
+    axes[0].set_ylabel("Force X")
+    axes[0].set_title("Forces in X-direction")
+    axes[0].legend()
+    axes[0].grid(True)
+
+    axes[1].set_ylabel("Force Y")
+    axes[1].set_title("Forces in Y-direction")
+    axes[1].legend()
+    axes[1].grid(True)
+
+    axes[2].set_ylabel("Force Z")
+    axes[2].set_title("Forces in Z-direction")
+    axes[2].legend()
+    axes[2].set_xlabel("Time step")
+    axes[2].grid(True)
+
+    plt.tight_layout()
+
+def plot_positions(t, x_save, xd_save):
+    cmap = plt.get_cmap("tab10")
+
+    iter_count = x_save.shape[1]  # Number of time steps
+    time_steps = np.arange(iter_count)
+
+    # Extract force components
+    positions_x = x_save[0::6, :]
+    positions_y = x_save[1::6, :]
+    positions_z = x_save[2::6, :]
+
+    positions_d_x = xd_save[0::6, :]
+    positions_d_y = xd_save[1::6, :]
+    positions_d_z = xd_save[2::6, :]
+
+    # Plot forces over time
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+
+    for i in range(4):
+        axes[0].plot(t, positions_x[i, :], color=cmap(0), label=f"x_{i + 1}")
+        axes[0].plot(t, positions_d_x[i, :], '--', color=cmap(0),  label=f"xd_{i + 1}",alpha=0.3)
+        axes[1].plot(t, positions_y[i, :], color=cmap(1), label=f"y_{i + 1}")
+        axes[1].plot(t, positions_d_y[i, :], '--', color=cmap(1), label=f"yd_{i + 1}", alpha=0.3)
+        axes[2].plot(t, positions_z[i, :], color=cmap(2), label=f"z_{i + 1}")
+        axes[2].plot(t, positions_d_z[i, :], '--', color=cmap(2), label=f"zd_{i + 1}", alpha=0.3)
+
+    # Labels and legends
+    axes[0].set_ylabel("Position X")
+    axes[0].set_title("Positions in X-direction")
+    axes[0].legend()
+    axes[0].grid(True)
+
+    axes[1].set_ylabel("Position Y")
+    axes[1].set_title("Positions in Y-direction")
+    axes[1].legend()
+    axes[1].grid(True)
+
+    axes[2].set_ylabel("Position Z")
+    axes[2].set_title("Positions in Z-direction")
+    axes[2].legend()
+    axes[2].set_xlabel("Time step")
+    axes[2].grid(True)
+
+    plt.tight_layout()

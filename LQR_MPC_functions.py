@@ -384,8 +384,8 @@ def init_MPC_model(x, k, k2, k3, c1, c2, l0, n_points, n_points2, n_actuators, x
     mpc = do_mpc.controller.MPC(model)
 
     setup_mpc = {
-        'n_horizon': 50,  # Prediction horizon
-        't_step': 100 * delta,
+        'n_horizon': 10,  # Prediction horizon
+        't_step': delta,
         'state_discretization': 'discrete',
         'store_full_solution': True,
     }
@@ -419,7 +419,7 @@ def init_MPC_model2(x2, k, k2, k3, c1, c2, l0,
                     mass_points, m_uav,
                     Q_vector, R_vector,
                     delta, u_limits, g):
-    mpc_dt = 10 * delta
+    mpc_dt = delta
     n_visible_points = n_actuators
     x_actuators_2 = np.zeros((n_actuators, 3))
     m = mass_points * np.ones((n_points, n_points2))
@@ -436,7 +436,8 @@ def init_MPC_model2(x2, k, k2, k3, c1, c2, l0,
         for i in range(n_points):
             pos_v = slice(6 * n_points * j + 6 * i + 3, 6 * n_points * j + 6 * i + 6)
             M[pos_v, pos_v] = m[i, j] * np.eye(3)
-            G[6 * n_points * j + 6 * i + 5] = m[i, j] * g
+            #G[6 * n_points * j + 6 * i + 5] =  mass_points* g
+            G[6 * n_points * j + 6 * i + 5] = 20*m[i, j] * g
     # print("M:", M)
     # print("G:", G)
 
@@ -457,9 +458,9 @@ def init_MPC_model2(x2, k, k2, k3, c1, c2, l0,
 
     M_inv = np.linalg.inv(M)
 
-    K_spring = K_matrix(1.02 * x2, k, k2, k3, c1, c2, l0, n_points, n_points2)
+    K_spring = K_matrix(x2, k, k2, k3, c1, c2, l0, n_points, n_points2)
 
-    x_next = x + mpc_dt * (M_inv @ (K_spring @ x) + B @ u)
+    x_next = x + mpc_dt * (M_inv @ (K_spring @ x ) + B @ u - G)
     model.set_rhs('x', x_next)
 
     model.setup()
