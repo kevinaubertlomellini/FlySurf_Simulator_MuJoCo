@@ -1,0 +1,11 @@
+1. Get a free Archive MA27 solver here: https://licences.stfc.ac.uk/product/coin-hsl-archive
+2. Unzip the zip/tarball in a directory, then go to that directory
+3. Open a terminal under that directory
+    3.1 Make sure you have meson build system installed and updated using `pip install --upgrade meson`
+    3.2 Make sure Compilers for Fortran and C, libraries for BLAS, LAPACK, and METIS are all installed.
+    3.3 `meson setup builddir --buildtype=release --prefix='/'`
+    3.4 `meson compile -C builddir`
+4. Go to "builddir" directory, you should see "libcoinhsl.so". Copy the file to [YOUR_CHOICE_OF_LOCATION], and change the filename to "libhsl.so".
+5. `cd ~`
+    5.1 `nano .bashrc`
+    5.2 Append to the end of file "export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:[YOUR_CHOICE_OF_LOCATION]"
