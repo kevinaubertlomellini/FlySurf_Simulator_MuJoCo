@@ -167,6 +167,12 @@ def shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, x, n_points, c, R_d
     # Reshape to (3*n_points,)
     return u.flatten(order='F').reshape(-1, 1)
 
+def compute_gamma(n_points, c, R_d, s_d, c_0):
+    c = c.reshape((3, n_points), order='F')
+    c_00 = np.mean(c, axis=1, keepdims=True)  # Centroid of c
+    c_b = c - c_00
+    x_gamma = s_d * R_d @ c_b + c_0.reshape(3, 1)
+    return x_gamma.flatten(order='F').reshape(-1, 1)
 
 
 def matrix_H_3D(Q_b, C_b):
@@ -270,6 +276,31 @@ def shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
     shape_gaussian = np.vstack((x_g_vector0, y_g_vector0, z_g_vector0)).T.flatten()
     return shape_gaussian
 
+
+def inverted_shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
+    # Generate mesh grid for x and y coordinates
+    x_g = np.linspace(-sides[0]/2, sides[0]/2, n_points[0])
+    y_g = np.linspace(-sides[1]/2, sides[1]/2, n_points[1])
+    X_g, Y_g = np.meshgrid(x_g, y_g)
+
+    x_g_vector0 = X_g.flatten()
+    y_g_vector0 = Y_g.flatten()
+
+    # Define Gaussian parameters
+    Amp = amplitude # Amplitude
+    x0 = center[0] # Center of Gaussian in x
+    y0 = center[1] # Center of Gaussian in y
+    sigma_x = sd[0]  # Standard deviation in x
+    sigma_y = sd[1] # Standard deviation in y
+
+    # Calculate the 2D Gaussian
+    z_g_vector0 = -Amp * np.exp(-((x_g_vector0 - x0) ** 2 / (2 * sigma_x ** 2) +
+                                 (y_g_vector0 - y0) ** 2 / (2 * sigma_y ** 2))) - 0.5
+
+    # Combine into shape_gaussian
+    shape_gaussian = np.vstack((x_g_vector0, y_g_vector0, z_g_vector0)).T.flatten()
+    return shape_gaussian
+
 def u_gravity_forces(n_UAVs, mass_points, mass_UAVs , rows, cols, g):
     u_Forces = np.zeros((3 * n_UAVs, 1))
     for kv in range(1, n_UAVs + 1):
@@ -287,65 +318,106 @@ def u_gravity_forces(n_UAVs, mass_points, mass_UAVs , rows, cols, g):
 def init_vectors(n_actuators, n_points, iter):
     u_save = np.zeros((3 * n_actuators, iter))
     x_save = np.zeros((6 * n_points[0] * n_points[1], iter))
+    x_gamma_save = np.zeros((3 * n_points[0] * n_points[1], iter))
     xd_save = np.zeros((6 * n_points[0] * n_points[1], iter))
     xe_save = np.zeros((6 * n_points[0] * n_points[1], iter))
-    return [u_save, x_save, xd_save, xe_save]
+    step_time_save = np.zeros((1, iter))
+    return [u_save, x_save, xd_save, xe_save,step_time_save, x_gamma_save ]
 
-def plot_errors(iter, delta, x_save, xd_save, xe_save):
-
+def plot_errors(iter, delta, x_save, xd_save, xe_save, x_gamma, n_tasks):
     t = np.arange(0, iter * delta, delta)
 
-    e_save = np.zeros((iter,1))
-    e_save2 = np.zeros((iter,1))
-    e_est_save = np.zeros((iter,1))
-    e_est_save2 = np.zeros((iter,1))
-    e_real_save = np.zeros((iter,1))
-    e_real_save2 = np.zeros((iter,1))
+    e_save = np.zeros((iter, 1))
+    e_save2 = np.zeros((iter, 1))
+    e_est_save = np.zeros((iter, 1))
+    e_est_save2 = np.zeros((iter, 1))
+    e_real_save = np.zeros((iter, 1))
+    e_real_save2 = np.zeros((iter, 1))
+    e_gamma_beta = np.zeros((iter, 1))
+    e_gamma_beta2 = np.zeros((iter, 1))
+    e_gamma_des = np.zeros((iter, 1))
+    e_gamma_des2 = np.zeros((iter, 1))
+
+    # = iter*delta/n_tasks
 
     for i in range(iter):
         pos = np.array([x_save[::6, i], x_save[1::6, i], x_save[2::6, i]]).T
         pos_e = np.array([xe_save[::6, i], xe_save[1::6, i], xe_save[2::6, i]]).T
         pos_d = np.array([xd_save[::6, i], xd_save[1::6, i], xd_save[2::6, i]]).T
+        pos_gamma = np.array([x_gamma[::3, i], x_gamma[1::3, i], x_gamma[2::3, i]]).T
         e_save[i] = average_hausdorff_distance(pos_e, pos_d)
         e_save2[i] = np.mean(np.linalg.norm(pos_e - pos_d, axis=1))
         e_est_save[i] = average_hausdorff_distance(pos_e, pos)
         e_est_save2[i] = np.mean(np.linalg.norm(pos_e - pos, axis=1))
         e_real_save[i] = average_hausdorff_distance(pos, pos_d)
         e_real_save2[i] = np.mean(np.linalg.norm(pos - pos_d, axis=1))
+        e_gamma_beta[i] = average_hausdorff_distance(pos, pos_gamma)
+        e_gamma_beta2[i] = np.mean(np.linalg.norm(pos - pos_gamma, axis=1))
+        e_gamma_des[i] = average_hausdorff_distance(pos_d, pos_gamma)
+        e_gamma_des2[i] = np.mean(np.linalg.norm(pos_d - pos_gamma, axis=1))
+
+        # Find the global max error across all arrays
+    max_error = max(np.max(e_save), np.max(e_save2),
+                    np.max(e_est_save), np.max(e_est_save2),
+                    np.max(e_real_save), np.max(e_real_save2),
+                    np.max(e_gamma_beta), np.max(e_gamma_beta2),
+                    np.max(e_gamma_des),np.max(e_gamma_des2))
+
+    # Add a 10% margin
+    y_limit = max_error * 1.1
 
     # Create a figure with 3 subplots (vertically stacked)
-    fig, axes = plt.subplots(3, 1, figsize=(10, 12))
+    fig, axes = plt.subplots(2, 3, figsize=(10, 12), sharey=True)
 
-    # Plot 1: Error
-    axes[0].plot(t, e_save.flatten(), linewidth=1.5, label='AHD')
-    axes[0].plot(t, e_save2.flatten(), linewidth=1.5, label='ED')
-    axes[0].set_xlabel("Time (s)")
-    axes[0].set_ylabel("Error (m)")
-    axes[0].set_title("Visible Error: AHD(x_e, x_d)")
-    axes[0].legend()
-    axes[0].grid(True)
+    # Plot 1: Approximation Error
+    axes[0, 0].plot(t, e_gamma_beta.flatten(), linewidth=2.0, label='AHD')
+    axes[0, 0].plot(t, e_gamma_beta2.flatten(), linewidth=2.0, label='ED')
+    axes[0, 0].set_ylabel("Error (m)")
+    axes[0, 0].set_title("Approximation Error: AHD(x, x_gamma)")
+    axes[0, 0].legend()
+    axes[0, 0].grid(True)
 
-    # Plot 2: Estimation Error
-    axes[1].plot(t, e_est_save.flatten(), linewidth=1.5, label='AHD')
-    axes[1].plot(t, e_est_save2.flatten(), linewidth=1.5, label='ED')
-    axes[1].set_xlabel("Time (s)")
-    axes[1].set_ylabel("Error (m)")
-    axes[1].set_title("Estimation Error: AHD(x, x_e)")
-    axes[1].legend()
-    axes[1].grid(True)
+    # Plot 2: Visible Error
+    axes[1,0].plot(t, e_save.flatten(), linewidth=2.0, label='AHD')
+    axes[1,0].plot(t, e_save2.flatten(), linewidth=2.0, label='ED')
+    axes[1,0].set_ylabel("Error (m)")
+    axes[1,0].set_title("Visible Error: AHD(x_e, x_d)")
+    axes[1,0].legend()
+    axes[1,0].grid(True)
 
-    # Plot 3: Real Error
-    axes[2].plot(t, e_real_save.flatten(), linewidth=1.5, label='AHD')
-    axes[2].plot(t, e_real_save2.flatten(), linewidth=1.5, label='ED')
-    axes[2].set_xlabel("Time (s)")
-    axes[2].set_ylabel("Error (m)")
-    axes[2].set_title("Real Error: AHD(x, x_d)")
-    axes[2].legend()
-    axes[2].grid(True)
+    # Plot 3: Estimation Error
+    axes[0,1].plot(t, e_est_save.flatten(), linewidth=2.0, label='AHD')
+    axes[0,1].plot(t, e_est_save2.flatten(), linewidth=2.0, label='ED')
+    axes[0,1].set_ylabel("Error (m)")
+    axes[0,1].set_title("Estimation Error: AHD(x, x_e)")
+    axes[0,1].legend()
+    axes[0,1].grid(True)
+
+    # Plot 4: Real Error
+    axes[1,1].plot(t, e_real_save.flatten(), linewidth=2.0, label='AHD')
+    axes[1,1].plot(t, e_real_save2.flatten(), linewidth=2.0, label='ED')
+    axes[1,1].set_xlabel("Time (s)")
+    axes[1,1].set_ylabel("Error (m)")
+    axes[1,1].set_title("Real Error: AHD(x, x_d)")
+    axes[1,1].legend()
+    axes[1,1].grid(True)
+
+    # Plot 4: Real Error
+    axes[1, 2].plot(t, e_gamma_des.flatten(), linewidth=2.0, label='AHD')
+    axes[1, 2].plot(t, e_gamma_des2.flatten(), linewidth=2.0, label='ED')
+    axes[1, 2].set_xlabel("Time (s)")
+    axes[1, 2].set_ylabel("Error (m)")
+    axes[1, 2].set_title("Planner Error: AHD(x_gamma, x_d)")
+    axes[1, 2].legend()
+    axes[1, 2].grid(True)
+
+    # Set the same y-axis range for all subplots
+    for i in range(2):
+        for j in range(2):
+            axes[i,j].set_ylim(0, y_limit)
 
     # Adjust layout for better spacing
     plt.tight_layout()
-
 
 def points_coord_estimator(quad_positions, rows, cols):
     quad_positions2 = [[rows, cols], [rows, 1], [1, 1], [1, cols]]

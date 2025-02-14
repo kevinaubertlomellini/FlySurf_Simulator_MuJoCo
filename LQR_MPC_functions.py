@@ -478,11 +478,11 @@ def init_MPC_model2(x2, k, k2, k3, c1, c2, l0,
             # 'jit': True,
             'ipopt.tol': 1e-3,
             'ipopt.max_iter': 1000,
-            # 'ipopt.print_level': 0,  # Disable IPOPT printing
+            'ipopt.print_level': 0,  # Disable IPOPT printing
             'ipopt.ma57_automatic_scaling': 'no',  # Enable MA57 auto scaling
             'ipopt.sb': 'yes',  # Enable silent barrier mode
-            'print_time': 1,  # Disable solver timing information
-            'ipopt.linear_solver': 'ma27'  # Use a faster linear solver
+            'print_time': 0,  # Disable solver timing information
+            'ipopt.linear_solver': 'ma57'  # Use a faster linear solver
         }
 
     }
