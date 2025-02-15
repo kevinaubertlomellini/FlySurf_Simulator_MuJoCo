@@ -50,7 +50,7 @@ y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of division
 
 delta_factor = 25
 delta = delta_factor*T_s
-time_change = 7
+time_change = 5
 n_tasks = 3
 total_time = time_change*n_tasks
 time_step_num = round(total_time / T_s)
@@ -60,7 +60,7 @@ n_points2 = int((cols+ spacing_factor)/(spacing_factor+1))
 l0= (spacing_factor+1)*x_spacing
 iter = int(time_step_num/delta_factor)
 
-[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save] = init_vectors(n_actuators, [rows, cols], iter)
+[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save, u_components_save] = init_vectors(n_actuators, [rows, cols], iter)
 
 x = np.zeros((n_points * n_points2 * 6,1))
 for i in range(n_points):
@@ -91,14 +91,14 @@ u_gravity = u_gravity_forces(n_UAVs = n_actuators, mass_points = mass_points, ma
 
 # PATH PLANNING PARAMETERS
 alpha_H = 3
-alpha_G = 20
+alpha_G = 5
 alpha_0 = 10.0
-alpha_Hd = 40
+alpha_Hd = 30
 shape = np.reshape(np.array([xd[::6],xd[1::6],xd[2::6]]),(3, rows*cols)).reshape(-1,1, order='F')
 R_d = rotation_matrix(0, 0, 0)
 s_d = 1.0
 c_0 = np.array([0.1, 0.1, 0.5])
-factor= 0.3
+factor= 0.25
 shape_gaussian = shape_gaussian_mesh(sides=[0.8, 0.8], amplitude=1.12, center=[0.0, 0.0], sd = [0.575, 0.575], n_points = [rows, cols])
 inverted_shape_gaussian = inverted_shape_gaussian_mesh(sides=[0.8, 0.8], amplitude=1.12, center=[0.0, 0.0], sd = [0.575, 0.575], n_points = [rows, cols])
 
@@ -196,7 +196,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             xe_iter = np.hstack((xe_pos, vels[1::,:3])).flatten().reshape(-1, 1)
 
             xd_pos = np.reshape(np.array([xd_iter[::6], xd_iter[1::6], xd_iter[2::6]]), (3, rows*cols)).reshape(-1, 1, order='F')
-            u_shape = shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, xd_pos, rows*cols, shape, R_d, s_d, c_0)
+            [u_shape, u_components_save[:, int(time_num/delta_factor)]] = shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, xd_pos, rows*cols, shape, R_d, s_d, c_0)
             xd_pos = xd_pos + u_shape * factor * delta
             xd_pos_vector= np.reshape(xd_pos,(rows*cols, -1))
             u_shape_vector = np.reshape(factor * u_shape, (rows*cols, -1))
@@ -295,6 +295,7 @@ t = np.arange(0, iter * delta, delta)
 plot_positions(t, x_save, xd_save)
 plot_forces(t, u_save)
 plot_errors(iter, delta, x_save, xd_save, xe_save, x_gamma_save, n_tasks)
+plot_u_errors(t, u_components_save)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)

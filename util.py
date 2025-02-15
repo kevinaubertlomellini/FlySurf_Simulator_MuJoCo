@@ -165,7 +165,7 @@ def shape_controller_3D(alpha_H, alpha_G, alpha_0, alpha_Hd, x, n_points, c, R_d
     # Total control input
     u = u_y + u_0 + u_Hd
     # Reshape to (3*n_points,)
-    return u.flatten(order='F').reshape(-1, 1)
+    return [u.flatten(order='F').reshape(-1, 1), np.array([np.mean(np.abs(alpha_H*u_H)),np.mean(np.abs(alpha_G*u_G)),np.mean(np.abs(u_0)),np.mean(np.abs(u_Hd))])]
 
 def compute_gamma(n_points, c, R_d, s_d, c_0):
     c = c.reshape((3, n_points), order='F')
@@ -315,14 +315,27 @@ def u_gravity_forces(n_UAVs, mass_points, mass_UAVs , rows, cols, g):
         u_Forces[3 * kv - 3:3 * kv, 0] = forces.flatten()
     return u_Forces
 
-def init_vectors(n_actuators, n_points, iter):
+def init_vectors(n_actuators, n_points, iter ):
     u_save = np.zeros((3 * n_actuators, iter))
     x_save = np.zeros((6 * n_points[0] * n_points[1], iter))
     x_gamma_save = np.zeros((3 * n_points[0] * n_points[1], iter))
     xd_save = np.zeros((6 * n_points[0] * n_points[1], iter))
     xe_save = np.zeros((6 * n_points[0] * n_points[1], iter))
     step_time_save = np.zeros((1, iter))
-    return [u_save, x_save, xd_save, xe_save,step_time_save, x_gamma_save ]
+    u_components_save = np.zeros((4, iter))
+    return [u_save, x_save, xd_save, xe_save,step_time_save, x_gamma_save, u_components_save]
+
+
+def init_vectors2(n_actuators, n_points, iter, n_points_sampled, N_horizon ):
+    u_save = np.zeros((3 * n_actuators, iter+1))
+    x_save = np.zeros((6 * n_points[0] * n_points[1], iter+1))
+    x_gamma_save = np.zeros((3 * n_points[0] * n_points[1], iter+1))
+    xd_save = np.zeros((6 * n_points[0] * n_points[1], iter+1))
+    xe_save = np.zeros((6 * n_points[0] * n_points[1], iter+1))
+    step_time_save = np.zeros((1, iter+1))
+    u_components_save = np.zeros((4, iter+1))
+    xd_sampled = np.zeros((6 * n_points_sampled[0] * n_points_sampled[1], iter+N_horizon+1))
+    return [u_save, x_save, xd_save, xe_save,step_time_save, x_gamma_save, u_components_save, xd_sampled]
 
 def plot_errors(iter, delta, x_save, xd_save, xe_save, x_gamma, n_tasks):
     t = np.arange(0, iter * delta, delta)
@@ -520,4 +533,30 @@ def plot_positions(t, x_save, xd_save):
     axes[2].set_xlabel("Time step")
     axes[2].grid(True)
 
+    plt.tight_layout()
+
+
+def plot_u_errors(t, u_components_save):
+    u_H = u_components_save[0, :]
+    u_G = u_components_save[1, :]
+    u_0 = u_components_save[2, :]
+    u_H_b = u_components_save[3, :]
+
+    # Create a figure with 2x2 subplots
+    fig, axes = plt.subplots(4, 1, figsize=(10, 12))
+
+    signals = [u_H, u_G, u_0, u_H_b]
+    titles = ["u_H", "u_G", "u_0", "u_H_b"]
+
+    # Find max absolute value for each signal and set ylim
+    for ax, signal, title in zip(axes.flat, signals, titles):
+        ax.plot(t, signal.flatten(), linewidth=2.0)
+        ax.set_ylabel("Signal")
+        ax.set_title(title)
+        ax.grid(True)
+
+        max_val = np.max(signal) * 1.1
+        ax.set_ylim(0, max_val)
+
+    # Adjust layout for better spacing
     plt.tight_layout()
