@@ -53,7 +53,7 @@ y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of division
 delta_factor = 25
 delta = delta_factor*T_s
 time_change = 5
-n_tasks = 3
+n_tasks = 5
 total_time = time_change*n_tasks
 time_step_num = round(total_time / T_s)
 
@@ -149,11 +149,18 @@ for ii in range(iter+N_horizon+1):
         x_gamma_save[:, ii] = x_gamma.flatten()
 
         if time_change == 1.0 * ii* delta_factor *model.opt.timestep:
-            R_d = rotation_matrix(np.pi / 6, 0, 0)
+            R_d = rotation_matrix(0, np.pi / 6, 0)
             s_d = 1.0
         if 2.0 * time_change == ii * delta_factor *model.opt.timestep:
             shape = inverted_shape_gaussian
             s_d = 1
+            c= np.array([0.3, 0.0, 0.5])
+        if (3.0 * time_change <= ii * delta_factor * T_s) and (5.0 * time_change > ii * delta_factor * T_s):
+            sep = iter / n_tasks * 2
+            c_0 = np.array(
+                [0.3 * np.cos(2 * np.pi * (ii - sep) / sep), 0.3 * np.sin(2 * np.pi * (ii - sep) / sep), 0.45])
+            # R_d = rotation_matrix(np.pi/5*np.sin(2*np.pi*(ii-sep)/sep), -np.pi/5*np.cos(2*np.pi*(ii-sep)/sep), 0)
+            factor = 0.1
 
     xd_sampled[:, ii] = xd.flatten()
 
@@ -209,6 +216,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             x_iter = np.hstack((states[1::], vels[1::,:3])).flatten().reshape(-1, 1)
 
             points = np.array([states[i] for i in quad_indices2])
+
+            print(points)
 
             if time_num==0:
                 flysurf.update(points_coord2, points)
