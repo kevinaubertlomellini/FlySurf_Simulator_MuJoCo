@@ -14,12 +14,14 @@ u = model.set_variable(var_type='_u', var_name='u', shape=(1,1))  # [force]
 # Define `x_des` as a parameter BEFORE setup()
 x_des = model.set_variable(var_type='_p', var_name='x_des', shape=(2,1))  # Desired state
 
+g  = model.set_variable(var_type='_p', var_name='g ', shape=(1,1))  # gravity
+
 # System dynamics (discrete-time)
 dt = 0.1  # Time step
 A = np.array([[1.0, dt], [0, 1.0]])  # State transition
 B = np.array([[0], [dt]])  # Control input
 
-x_next = A @ x + B @ u
+x_next = A @ x + B @ (u- g)
 model.set_rhs('x', x_next)
 
 model.setup()  # Now we can call setup()
@@ -31,7 +33,11 @@ setup_mpc = {
     'n_horizon': 10,  # Prediction horizon
     't_step': dt,
     'state_discretization': 'discrete',
-    'store_full_solution': True,
+    'store_full_solution': False,
+    'nlpsol_opts': {
+                # 'jit': True,
+                'ipopt.print_level': 0,  # Disable IPOPT printing
+            }
 }
 mpc.set_param(**setup_mpc)
 

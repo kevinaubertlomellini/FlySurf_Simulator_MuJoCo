@@ -55,7 +55,7 @@ def main():
 
     delta_factor = 25
     delta = delta_factor*T_s
-    time_change = 50
+    time_change = 25
     n_tasks = 5
     total_time = time_change*n_tasks
     time_step_num = round(total_time / T_s)
@@ -97,17 +97,19 @@ def main():
     #print(u_gravity)
 
     # PATH PLANNING PARAMETERS
-    alpha_H = 3
-    alpha_G = 5
-    alpha_0 = 10.0
-    alpha_Hd = 30
-    shape = np.reshape(np.array([xd[::6],xd[1::6],xd[2::6]]),(3, rows*cols)).reshape(-1,1, order='F')
+    alpha_H = 3  # 3
+    alpha_G = 5  # 5
+    alpha_0 = 5.0  # 10.0
+    alpha_Hd = 8.0  # 30
+    shape = np.reshape(np.array([xd[::6], xd[1::6], xd[2::6]]), (3, rows * cols)).reshape(-1, 1, order='F')
     R_d = rotation_matrix(0, 0, 0)
     s_d = 1.0
-    c_0 = np.array([0.3, 0.0, 0.45])
-    factor= 0.01
-    shape_gaussian = shape_gaussian_mesh(sides=[0.8, 0.8], amplitude=1.12, center=[0.0, 0.0], sd = [0.575, 0.575], n_points = [rows, cols])
-    inverted_shape_gaussian = inverted_shape_gaussian_mesh(sides=[0.9*x_length, 0.9*x_length], amplitude=1.5, center=[0.0, 0.0], sd = [0.8, 0.8], n_points = [rows, cols])
+    c_0 = np.array([0.0, 0.0, 0.5])
+    factor = 0.045
+    shape_gaussian = shape_gaussian_mesh(sides=[0.7 * x_length, 0.7 * x_length], amplitude=1.12, center=[0.0, 0.0],
+                                         sd=[1.0, 1.0], n_points=[rows, cols])
+    inverted_shape_gaussian = inverted_shape_gaussian_mesh(sides=[0.8 * x_length, 0.8 * x_length], amplitude=1.2,
+                                                           center=[0.0, 0.0], sd=[1.2, 1.2], n_points=[rows, cols])
 
     shape = inverted_shape_gaussian
 
@@ -152,18 +154,29 @@ def main():
             xd_save[:, ii] = xd_iter.flatten()
             x_gamma_save[:, ii] = x_gamma.flatten()
 
-            if time_change == 1.0 * ii* delta_factor *T_s:
+            if time_change == 1.0 * ii * delta_factor * T_s:
                 R_d = rotation_matrix(0, -np.pi / 5, 0)
+                c_0 = np.array([0.75, 0.0, 0.75])
                 s_d = 1.0
-            if (2.0 * time_change <= ii * delta_factor *T_s) and (4.0 * time_change > ii * delta_factor * T_s):
+
+            if (2.0 * time_change <= ii * delta_factor * T_s) and (4.0 * time_change > ii * delta_factor * T_s):
                 sep = iter / n_tasks * 2
-                c_0 = np.array([0.3*np.cos(2*np.pi*(ii-sep)/sep) , 0.3*np.sin(2*np.pi*(ii-sep)/sep), 0.45])
-                #R_d = rotation_matrix(np.pi/5*np.sin(2*np.pi*(ii-sep)/sep), -np.pi/5*np.cos(2*np.pi*(ii-sep)/sep), 0)
-                factor = 0.1
-            if 4.0 * time_change == ii * delta_factor *T_s:
+                c_0 = np.array(
+                    [0.75 * np.cos(2 * np.pi * (ii - sep) / sep), 0.75 * np.sin(2 * np.pi * (ii - sep) / sep), 0.75])
+                yaw = np.arctan2(c_0[1], c_0[0])
+                R_d = rotation_matrix(0, -np.pi / 5, yaw)
+                factor = 0.18
+            '''
+            if time_change == ii * delta_factor *T_s:
                 R_d = rotation_matrix(0, 0, 0)
-                c_0 = np.array([0.0, 0.0, 0.0])
+                c_0 = np.array([-0.3, 0.0, 0.4])
                 factor = 0.05
+            '''
+
+            if 4 * time_change == ii * delta_factor * T_s:
+                c_0 = np.array([0.0, 0.0, 0.25])
+                R_d = rotation_matrix(0, 0, 0)
+                factor = 0.045
 
 
         xd_sampled[:, ii] = xd.flatten()

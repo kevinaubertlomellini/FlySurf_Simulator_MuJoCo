@@ -324,6 +324,7 @@ def K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2):
                 for bb in range(3):
                     A[pos_v1, pos_x1] = aux_same[aa, bb]
 
+    A = np.nan_to_num(A, nan=0.0)
     return A
 
 
@@ -836,3 +837,113 @@ def init_MPC_model4(x2, k, k2, k3, c1, c2, l0,
 
     return mpc
 
+def init_MPC_model5(x2, k, k2, k3, c1, c2, l0,
+                    n_points, n_points2, n_actuators, x_actuators,
+                    mass_points, m_uav,
+                    Q_vector, R_vector,
+                    delta, u_limits, g, xd_save, N_horizon):
+    mpc_dt = delta
+    n_visible_points = n_actuators
+    x_actuators_2 = np.zeros((n_actuators, 3))
+    m = mass_points * np.ones((n_points, n_points2))
+    for i in range(n_actuators):
+        m[x_actuators[i, 0] - 1, x_actuators[i, 1] - 1] = m_uav
+        x_actuators_2[i, 0] = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 1
+        x_actuators_2[i, 1] = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 2
+        x_actuators_2[i, 2] = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 3
+
+    M = np.eye(6 * n_points * n_points2)
+    G = np.zeros((6 * n_points * n_points2, 1))
+    # Update M and G
+    for j in range(n_points2):
+        for i in range(n_points):
+            pos_v = slice(6 * n_points * j + 6 * i + 3, 6 * n_points * j + 6 * i + 6)
+            M[pos_v, pos_v] = m[i, j] * np.eye(3)
+            # G[6 * n_points * j + 6 * i + 5] =  mass_points* g
+            G[6 * n_points * j + 6 * i + 5] = m[i, j] * g
+    # print("M:", M)
+    # print("G:", G)
+
+    B = np.zeros((n_points * n_points2 * 6, 3 * n_actuators))
+    B_matrix_3 = np.eye(3) / m_uav
+    for i in range(n_actuators):
+        B[6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 3:6 * n_points * (
+                x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 6, 3 * i:3 * (i + 1)] = B_matrix_3
+
+    # Define the system model
+    model_type = 'discrete'
+    model = do_mpc.model.Model(model_type)
+
+    # Define state (x) and control (u) variables
+    x = model.set_variable(var_type='_x', var_name='x', shape=(6 * n_points * n_points2, 1))  # [position, velocity]
+    u = model.set_variable(var_type='_u', var_name='u', shape=(3 * n_actuators, 1))  # [force]
+    x_ref = model.set_variable(var_type='_tvp', var_name='x_ref', shape=(6 * n_points * n_points2, 1))
+
+
+    M_inv = np.linalg.inv(M)
+
+    K_spring = K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2)
+
+    x_next = x + mpc_dt * (M_inv @ ((K_spring@ x)) + B @ u - G)
+
+
+    model.set_rhs('x', x_next)
+
+    model.setup()
+
+    # Define MPC Controller
+    mpc = do_mpc.controller.MPC(model)
+
+    setup_mpc = {
+        'n_horizon': N_horizon,  # Prediction horizon
+        't_step': mpc_dt,
+        'state_discretization': 'discrete',
+        'open_loop': 0,  # Closed-loop MPC
+        'store_full_solution': False,
+        'nlpsol_opts': {
+            # 'jit': True,
+            'ipopt.tol': 1e-3,
+            'ipopt.max_iter': 1000,
+            'ipopt.print_level': 0,  # Disable IPOPT printing
+            'ipopt.ma57_automatic_scaling': 'no',  # Enable MA57 auto scaling
+            'ipopt.sb': 'yes',  # Enable silent barrier mode
+            'print_time': 0,  # Disable solver timing information
+            'ipopt.linear_solver': 'ma27'  # Use a faster linear solver
+        }
+    }
+
+    mpc.set_param(**setup_mpc)
+
+    Q = Q_vector[3] * np.eye(6 * n_points * n_points2)  # velocity in z
+    for yu in range(1, n_points * n_points2 + 1):
+        Q[6 * yu - 4, 6 * yu - 4] = Q_vector[1]  # Altitude z
+        Q[6 * yu - 6:6 * yu - 4, 6 * yu - 6:6 * yu - 4] = Q_vector[0] * np.eye(2)  # x and y
+        Q[6 * yu - 3:6 * yu - 1, 6 * yu - 3:6 * yu - 1] = Q_vector[2] * np.eye(2)  # velocity in x and y
+    R = R_vector[1] * np.eye(3 * n_actuators)  # force in z
+    for yi in range(n_actuators):
+        R[3 * yi + 1:3 * yi + 3, 3 * yi + 1:3 * yi + 3] = R_vector[0] * np.eye(2)  # force in x and y
+
+    # Stage cost: (x - x_ref)^2 + lambda * u^2
+    mterm = (x - x_ref).T @ Q @ (x - x_ref)  # Terminal cost (optional)
+    lterm = (x - x_ref).T @ Q @ (x - x_ref) + u.T @ R @ u  # Stage cost
+
+    mpc.set_objective(mterm=mterm, lterm=lterm)
+    mpc.set_rterm(u=1)  # Regularization
+
+    # Input constraints
+    mpc.bounds['lower', '_u', 'u'] = np.tile(np.array([u_limits[0, 0], u_limits[1, 0], u_limits[2, 0]]),
+                                             n_actuators)
+    mpc.bounds['upper', '_u', 'u'] = np.tile(np.array([u_limits[0, 1], u_limits[1, 1], u_limits[2, 1]]),
+                                             n_actuators)
+
+    tvp_template = mpc.get_tvp_template()
+
+    def tvp_fun(t_now):
+        for k in range(N_horizon + 1):
+            tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt + k)]
+
+        return tvp_template
+
+    mpc.set_tvp_fun(tvp_fun)
+
+    return mpc
