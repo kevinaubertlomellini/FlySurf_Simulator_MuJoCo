@@ -18,15 +18,15 @@ import itertools
 # SPRING MATRIX AS PARAMETER
 
 # FLYSURF SIMULATOR PARAMETERS
-rows = 13 # Number of rows (n-1)/(spacing+1)
+rows = 17 # Number of rows (n-1)/(spacing+1)
 cols = rows # Number of columns
 x_init = -0.5 # Position of point in x (1,1)
 y_init = -0.5 # Position of point in y (1,1)
 x_length = 1  # Total length in x direction
 y_length = 1  # Total length in y direction
-str_stif = 0.001 # Stifness of structural springs
-shear_stif = 0.001 # Stifness of shear springs
-flex_stif = 0.001 # Stifness of flexion springs
+str_stif = 2.0 # Stifness of structural springs
+shear_stif = 2.0 # Stifness of shear springs
+flex_stif = 2.0 # Stifness of flexion springs
 g = 9.81 # Gravity value
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
 #quad_positions = [[x, y] for x, y in itertools.product(range(1, rows+1), repeat=2)]
@@ -38,8 +38,8 @@ mass_quads = 0.07 # Mass of each UAV
 damp_point = 0.01 # Damping coefficient on each point
 damp_quad = 0.6 # Damping coefficient on each UAV
 T_s = 0.004 # Simulator step
-u_limits = 10*np.array([[-1.0, 1.0], [-1.0, 1.0], [-0.5, 1.0]]) # Actuator limits
-max_l_str = 0.01  # Maximum elongation from the natural length of the structural springs
+u_limits = np.array([[-1.0, 1.0], [-1.0, 1.0], [-5.0, 10.0]]) # Actuator limits
+max_l_str = 0.05  # Maximum elongation from the natural length of the structural springs
 max_l_shear = 2*max_l_str  # Maximum elongation from the natural length of the shear springs
 max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the flexion springs
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
@@ -162,7 +162,10 @@ for ii in range(iter+N_horizon+1):
     shape_sampled_save[:,:, ii] = ((shape_3-shape_00).T)[indices2].T
     shape_save[:, :, ii] = shape_3-shape_00
 
-mpc  = init_MPC_general(str_stif,shear_stif,flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_total/(n_points*n_points2), mass_quads, delta, u_limits, g, Rs_d_save, shape_sampled_save , xd_0_save ,N_horizon)
+# CONTROL PARAMETERS
+R_vector = [50, 50] # [force in x and y, force in z]
+
+mpc  = init_MPC_general(str_stif,shear_stif,flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_total/(n_points*n_points2), mass_quads, R_vector, delta, u_limits, g, Rs_d_save, shape_sampled_save , xd_0_save ,N_horizon)
 mpc.setup()
 mpc.x0 = x
 mpc.set_initial_guess()

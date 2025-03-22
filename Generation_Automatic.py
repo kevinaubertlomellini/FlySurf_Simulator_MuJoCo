@@ -309,13 +309,13 @@ def generate_xml2(rows, cols, x_init, y_init, x_length, y_length, quad_positions
     </spatial>""")
             if col + 2 < cols:
                 double_tendon_output.append(f"""
-    <spatial range="{2 * x_spacing - max_l_shear:.6f} {2 * x_spacing + max_l_shear:.6f}" limited="true"  width=".003" stiffness="{shear_stif:.4f}">
+    <spatial range="{2 * x_spacing - max_l_shear:.6f} {2 * x_spacing + max_l_shear:.6f}" limited="true"  width=".003" stiffness="{shear_stif:.4f}" rgba="0.5 0.5 0.5 0">
     <site site="ball_{row + 1}_{col + 1}"/>
     <site site="ball_{row + 1}_{col + 3}"/>
     </spatial>""")
             if row + 2 < rows:
                 double_tendon_output.append(f"""
-    <spatial range="{2 * y_spacing - max_l_shear:.6f} {2 * y_spacing + max_l_shear:.6f}" limited="true"  width=".003" stiffness="{shear_stif:.4f}">
+    <spatial range="{2 * y_spacing - max_l_shear:.6f} {2 * y_spacing + max_l_shear:.6f}" limited="true"  width=".003" stiffness="{shear_stif:.4f}" rgba="0.5 0.5 0.5 0">
     <site site="ball_{row + 1}_{col + 1}"/>
     <site site="ball_{row + 3}_{col + 1}"/>
     </spatial>""")

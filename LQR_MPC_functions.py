@@ -1168,7 +1168,7 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
     lterm = (x - x_ref).T @ Q @ (x - x_ref)  # Stage cost
 
     mpc.set_objective(mterm=mterm, lterm=lterm)
-    mpc.set_rterm(u=R_vector[0])  # Regularization
+    mpc.set_rterm(u.T @ R @ u)  # Regularization
 
     # Input constraints
     mpc.bounds['lower', '_u', 'u'] = np.tile(np.array([u_limits[0, 0], u_limits[1, 0], u_limits[2, 0]]),
@@ -1185,6 +1185,7 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
         return tvp_template
 
     mpc.set_tvp_fun(tvp_fun)
+    mpc.set_nl_cons('n_length_con', expr = ca.norm_2(x[0:3] - x[6 * 7 - 6: 6 * 7 - 3]), ub=0.975)
 
     return mpc
 
@@ -1554,7 +1555,7 @@ def init_MPC_shape(k, k2, k3, c1, c2, l0,
 
 def init_MPC_general(k, k2, k3, c1, c2, l0,
                     n_points, n_points2, n_actuators, x_actuators,
-                    mass_points, m_uav,
+                    mass_points, m_uav, R_vector,
                     delta, u_limits, g, Rs_d_save, shape_save, xd_0_save, N_horizon):
     mpc_dt = delta
     x_actuators_2 = np.zeros((n_actuators, 3))
@@ -1628,6 +1629,10 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     mpc.set_param(**setup_mpc)
 
+    R = R_vector[1] * np.eye(3 * n_actuators)  # force in z
+    for yi in range(n_actuators):
+        R[3 * yi + 1:3 * yi + 3, 3 * yi + 1:3 * yi + 3] = R_vector[0] * np.eye(2)  # force in x and y
+
     one_1 = np.ones((n_points * n_points2, 1)) / (n_points * n_points2)  # Define an n x 1 column vector
     x_3 = ca.reshape(x, (6, n_points*n_points2))
     x_0 = x_3 @ one_1
@@ -1669,7 +1674,7 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     mpc.set_objective(mterm=mterm, lterm=lterm)
     #mpc.set_rterm(u=0.1)  # Regularization
-    mpc.set_rterm(u=10)  # Regularization
+    mpc.set_rterm(u.T @ R @ u)  # Regularization
 
     # Input constraints
     mpc.bounds['lower', '_u', 'u'] = np.tile(np.array([u_limits[0, 0], u_limits[1, 0], u_limits[2, 0]]),
@@ -1687,13 +1692,13 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
         return tvp_template
 
     mpc.set_tvp_fun(tvp_fun)
+    mpc.set_nl_cons('n_length_con', expr = ca.norm_2(x[0:3] - x[6 * 7 - 6: 6 * 7 - 3]), ub=0.975)
 
     return mpc
 
 def init_MPC_Rs_shape(k, k2, k3, c1, c2, l0,
                      n_points, n_points2, n_actuators, x_actuators,
                      mass_points, m_uav,
-                     Q_vector, R_vector,
                      delta, u_limits, g, Rs_d_save, shape_save, xd_0_save, N_horizon):
     mpc_dt = 20 * delta
     x_actuators_2 = np.zeros((n_actuators, 3))
