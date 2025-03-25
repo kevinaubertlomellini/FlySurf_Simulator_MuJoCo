@@ -30,7 +30,7 @@ flex_stif = 0.001 # Stifness of flexion springs
 g = 9.81 # Gravity value
 quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
 #quad_positions = [[x, y] for x, y in itertools.product(range(1, rows+1), repeat=2)]
-quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
+#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 mass_total = 0.1
 mass_points = mass_total/(rows*cols) # Mass of each point0

@@ -1073,7 +1073,7 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
                     n_points, n_points2, n_actuators, x_actuators,
                     mass_points, m_uav,
                     Q_vector, R_vector,
-                    delta, u_limits, g, xd_save, N_horizon):
+                    delta, u_limits, g, xd_save, N_horizon, iota_min, iota_max):
     mpc_dt = delta
     n_visible_points = n_actuators
     x_actuators_2 = np.zeros((n_actuators, 3))
@@ -1185,7 +1185,17 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
         return tvp_template
 
     mpc.set_tvp_fun(tvp_fun)
-    mpc.set_nl_cons('n_length_con', expr = ca.norm_2(x[0:3] - x[6 * 7 - 6: 6 * 7 - 3]), ub=0.975)
+    #mpc.set_nl_cons('n_length_con', expr = ca.norm_2(x[0:3] - x[6 * 7 - 6: 6 * 7 - 3]), ub=0.975)
+
+
+    for i in range(n_actuators-1):
+        for j in range(i+1,n_actuators):
+            index_i = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0]-1)
+            index_j = 6 * n_points * (x_actuators[j, 1] - 1) + 6 * (x_actuators[j, 0] - 1)
+            length_i_j = np.linalg.norm(x_actuators[j,:]-x_actuators[i,:])*l0
+            distance_expr = ca.norm_2(x[index_i: index_i + 3] - x[index_j: index_j + 3])
+            mpc.set_nl_cons(f'n_length_con_{i}_{j}', expr=distance_expr , ub=iota_max*length_i_j)
+            mpc.set_nl_cons(f'n_length_con_lb_{i}_{j}', expr=-distance_expr, ub=-iota_min * length_i_j)
 
     return mpc
 
@@ -1556,7 +1566,7 @@ def init_MPC_shape(k, k2, k3, c1, c2, l0,
 def init_MPC_general(k, k2, k3, c1, c2, l0,
                     n_points, n_points2, n_actuators, x_actuators,
                     mass_points, m_uav, R_vector,
-                    delta, u_limits, g, Rs_d_save, shape_save, xd_0_save, N_horizon):
+                    delta, u_limits, g, Rs_d_save, shape_save, xd_0_save, N_horizon, iota_min, iota_max):
     mpc_dt = delta
     x_actuators_2 = np.zeros((n_actuators, 3))
     m = mass_points * np.ones((n_points, n_points2))
@@ -1662,7 +1672,7 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     #Q_0 = 250000000*np.eye(6)
 
-    Q_0 = 5000000 * np.eye(6)
+    Q_0 = 10000000 * np.eye(6)
 
     Q_0[3:5, 3:5] = 2 * np.eye(2)
 
@@ -1692,7 +1702,14 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
         return tvp_template
 
     mpc.set_tvp_fun(tvp_fun)
-    mpc.set_nl_cons('n_length_con', expr = ca.norm_2(x[0:3] - x[6 * 7 - 6: 6 * 7 - 3]), ub=0.975)
+    for i in range(n_actuators-1):
+        for j in range(i+1,n_actuators):
+            index_i = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0]-1)
+            index_j = 6 * n_points * (x_actuators[j, 1] - 1) + 6 * (x_actuators[j, 0] - 1)
+            length_i_j = np.linalg.norm(x_actuators[j,:]-x_actuators[i,:])*l0
+            distance_expr = ca.norm_2(x[index_i: index_i + 3] - x[index_j: index_j + 3])
+            mpc.set_nl_cons(f'n_length_con_{i}_{j}', expr=distance_expr , ub=iota_max*length_i_j)
+            mpc.set_nl_cons(f'n_length_con_lb_{i}_{j}', expr=-distance_expr, ub=-iota_min * length_i_j)
 
     return mpc
 

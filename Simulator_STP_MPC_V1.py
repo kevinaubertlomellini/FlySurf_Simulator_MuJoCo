@@ -17,7 +17,7 @@ from LQR_MPC_functions import *
 # SHAPE TRAJECTORY PLANNER + NONLINEAR MPC
 
 # FLYSURF SIMULATOR PARAMETERS
-rows = 17 # Number of rows (n-1)/(spacing+1)
+rows = 13 # Number of rows (n-1)/(spacing+1)
 cols = rows # Number of columns
 x_init = -0.5 # Position of point in x (1,1)
 y_init = -0.5 # Position of point in y (1,1)
@@ -42,6 +42,9 @@ max_l_str = 0.05  # Maximum elongation from the natural length of the structural
 max_l_shear = 2*max_l_str  # Maximum elongation from the natural length of the shear springs
 max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the flexion springs
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
+
+iota_min = 0.5
+iota_max = 1.1
 
 # Generate xml simulation  file
 [model, data] = generate_xml2(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, T_s, u_limits, max_l_str, max_l_shear, max_l_flex, file_path)
@@ -92,7 +95,7 @@ xd_iter = xd.copy()
 
 # CONTROL PARAMETERS
 Q_vector = [150000, 70000, 0, 0, 150000, 70000, 2, 2] # [x and y, z, v_x and v_y, v_z, x_UAV and y_UAV, z_UAV , v_x_quad and v_y_quad, v_z_quad]
-R_vector = [500, 500] # [force in x and y, force in z]
+R_vector = [200, 200] # [force in x and y, force in z]
 
 u_gravity = u_gravity_forces(n_UAVs = n_actuators, mass_points = mass_points, mass_UAVs = mass_quads, rows =rows, cols=cols, g= g)
 
@@ -180,7 +183,7 @@ for ii in range(iter+N_horizon+1):
     shape_00 = np.mean(shape_3, axis=1, keepdims=True)  # Centroid of c
     shape_save[:, :, ii] = shape_3 - shape_00
 
-mpc = init_MPC_model7(str_stif,shear_stif,flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_vector, R_vector, delta, u_limits, g, xd_sampled, N_horizon)
+mpc = init_MPC_model7(str_stif,shear_stif,flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_vector, R_vector, delta, u_limits, g, xd_sampled, N_horizon, iota_min, iota_max)
 mpc.setup()
 mpc.x0 = x
 mpc.set_initial_guess()
