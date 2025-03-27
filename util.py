@@ -27,6 +27,16 @@ matplotlib.rcParams['ps.fonttype'] = 42
 from scipy.spatial import Delaunay
 import matplotlib.colors as mcolors
 
+def progress_bar(current, total, bar_length=50):
+    fraction = current / total
+    
+    arrow = int(fraction * bar_length - 1) * '█' + '>'
+    padding = (bar_length - len(arrow)) * ' '
+    
+    ending = '\n' if current == total else '\r'
+    
+    print(f'Progress: [{arrow}{padding}] {int(fraction*100)}%', end=ending, flush=True)
+
 
 def average_hausdorff_distance(points_a: np.ndarray, points_b: np.ndarray) -> float:
     """

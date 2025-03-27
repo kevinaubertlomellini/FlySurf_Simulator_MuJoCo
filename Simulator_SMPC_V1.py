@@ -60,8 +60,8 @@ y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of division
 
 delta_factor = 5
 delta = delta_factor*T_s
-time_change = 3
-n_tasks = 3
+time_change = 0.1
+n_tasks = 1
 total_time = time_change*n_tasks +1
 time_step_num = round(total_time / T_s)
 
@@ -293,8 +293,9 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         # Since OpenGL’s coordinate system is bottom-up, flip the image vertically.
         img = np.flipud(img)
         output.write(img)
+        progress_bar(data.time, total_time)
 
-    cv2.destroyAllWindows() 
+    # cv2.destroyAllWindows() 
     output.release() 
 
 
@@ -302,7 +303,7 @@ t = np.arange(0, (iter+1) * delta, delta)
 
 step = int(time_num/delta_factor)
 
-base_directory = "/home/marhes_1/FLYSOM/Data/Simulation"
+base_directory = "./Data/Simulation"
 experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 experiment_directory = os.path.join(base_directory,f"SMPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
 os.makedirs(experiment_directory, exist_ok=True)
