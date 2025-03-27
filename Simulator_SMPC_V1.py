@@ -60,8 +60,8 @@ y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of division
 
 delta_factor = 5
 delta = delta_factor*T_s
-time_change = 0.1
-n_tasks = 1
+time_change = 3
+n_tasks = 3
 total_time = time_change*n_tasks +1
 time_step_num = round(total_time / T_s)
 
@@ -295,7 +295,6 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         output.write(img)
         progress_bar(data.time, total_time)
 
-    # cv2.destroyAllWindows() 
     output.release() 
 
 
