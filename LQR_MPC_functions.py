@@ -1214,7 +1214,6 @@ def init_MPC_model7(x2,k, k2, k3, c1, c2, l0,
 
     def tvp_fun(t_now):
         for k in range(N_horizon):
-            print(k)
             tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt + k)]
             '''
             if k == N_horizon - 1:
