@@ -214,8 +214,7 @@ def K_matrix(x, k, k2, k3, c1, c2, l0, n_points, n_points2):
 
 
 def K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2):
-    A = np.zeros((n_points * n_points2 * 6, n_points * n_points2 * 6))
-
+    A = ca.SX.zeros(n_points * n_points2 * 6, n_points * n_points2 * 6)
     for j in range(1, n_points2 + 1):
         for i in range(1, n_points + 1):
             pos_x1 = 6 * n_points * (j - 1) + 6 * (i - 1)
@@ -223,108 +222,102 @@ def K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2):
             pos_v1 = 6 * n_points * (j - 1) + 6 * (i - 1) + 3
             pos_v2 = 6 * n_points * (j - 1) + 6 * (i - 1) + 6
 
-            A[pos_x1: pos_x2, pos_v1: pos_v2] = np.eye(3)
-
+            A[pos_x1: pos_x2, pos_v1: pos_v2] = ca.SX.eye(3)
             c = c2 if (i == 1 and j == 1) or (i == 1 and j == n_points2) or (i == n_points and j == 1) or (
-                        i == n_points and j == n_points2) else c1
-            A[pos_v1: pos_v2, pos_v1: pos_v2] = -c * np.eye(3)
-
-            aux_same = np.zeros((3, 3))
-
+                    i == n_points and j == n_points2) else c1
+            A[pos_v1: pos_v2, pos_v1: pos_v2] = -c * ca.SX.eye(3)
+            aux_same = ca.SX.zeros((3, 3))
             if i < n_points:
-                aux_same = aux_same - k * np.eye(3) + k * l0 / norm_matrix2(i, j, i + 1, j, x, n_points) * np.eye(3)
-                auxiliar_value = k * np.eye(3) - k * l0 / norm_matrix2(i, j, i + 1, j, x, n_points) * np.eye(3)
+                aux_same = aux_same - k * ca.SX.eye(3) + k * l0 / norm_matrix2(i, j, i + 1, j, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k * ca.SX.eye(3) - k * l0 / norm_matrix2(i, j, i + 1, j, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1+ 6+bb] = auxiliar_value[aa, bb]
-
+                        A[pos_v1 + aa, pos_x1 + 6 + bb] = auxiliar_value[aa, bb]
             if i < n_points - 1:
-                aux_same = aux_same - k3 * np.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i + 2, j, x, n_points)*np.eye(3)
-                auxiliar_value = k3 * np.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i + 2, j, x, n_points) * np.eye(3)
+                aux_same = aux_same - k3 * ca.SX.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i + 2, j, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k3 * ca.SX.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i + 2, j, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1+ 12+bb] = auxiliar_value[aa, bb]
-
+                        A[pos_v1 + aa, pos_x1 + 12 + bb] = auxiliar_value[aa, bb]
             if i > 1:
-                aux_same = aux_same - k * np.eye(3) + k * l0 / norm_matrix2(i, j, i - 1, j, x, n_points) * np.eye(3)
-                auxiliar_value= k * np.eye(3) - k * l0 / norm_matrix2(i, j, i - 1, j, x, n_points) * np.eye(3)
+                aux_same = aux_same - k * ca.SX.eye(3) + k * l0 / norm_matrix2(i, j, i - 1, j, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k * ca.SX.eye(3) - k * l0 / norm_matrix2(i, j, i - 1, j, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1-6+bb] = auxiliar_value[aa, bb]
-
-
+                        A[pos_v1 + aa, pos_x1 - 6 + bb] = auxiliar_value[aa, bb]
             if i > 2:
-                aux_same = aux_same - k3 * np.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i - 2, j, x, n_points)*np.eye(3)
-                auxiliar_value = k3 * np.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i - 2, j, x, n_points) * np.eye(3)
+                aux_same = aux_same - k3 * ca.SX.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i - 2, j, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k3 * ca.SX.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i - 2, j, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1-12+bb] = auxiliar_value[aa, bb]
+                        A[pos_v1 + aa, pos_x1 - 12 + bb] = auxiliar_value[aa, bb]
 
             if j < n_points2:
-                aux_same = aux_same - k * np.eye(3) + k * l0 / norm_matrix2(i, j, i, j + 1, x, n_points) * np.eye(3)
-                auxiliar_value = k * np.eye(3) - k * l0 / norm_matrix2(i, j, i, j + 1, x, n_points) * np.eye(3)
+                aux_same = aux_same - k * ca.SX.eye(3) + k * l0 / norm_matrix2(i, j, i, j + 1, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k * ca.SX.eye(3) - k * l0 / norm_matrix2(i, j, i, j + 1, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1+ 6*n_points+bb] = auxiliar_value[aa, bb]
+                        A[pos_v1 + aa, pos_x1 + 6 * n_points + bb] = auxiliar_value[aa, bb]
 
             if j < n_points2 - 1:
-                aux_same = aux_same - k3 * np.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i, j + 2, x, n_points)*np.eye(3)
-                auxiliar_value = k3 * np.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i, j + 2, x, n_points) * np.eye(3)
+                aux_same = aux_same - k3 * ca.SX.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i, j + 2, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k3 * ca.SX.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i, j + 2, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1+ 12*n_points+bb] = auxiliar_value[aa, bb]
-
+                        A[pos_v1 + aa, pos_x1 + 12 * n_points + bb] = auxiliar_value[aa, bb]
             if j > 1:
-                aux_same = aux_same - k * np.eye(3) + k * l0 / norm_matrix2(i, j, i, j - 1, x, n_points) * np.eye(3)
-                auxiliar_value = k * np.eye(3) - k * l0 / norm_matrix2(i, j, i, j - 1, x, n_points) * np.eye(3)
+                aux_same = aux_same - k * ca.SX.eye(3) + k * l0 / norm_matrix2(i, j, i, j - 1, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k * ca.SX.eye(3) - k * l0 / norm_matrix2(i, j, i, j - 1, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1 - 6*n_points+bb] = auxiliar_value[aa, bb]
+                        A[pos_v1 + aa, pos_x1 - 6 * n_points + bb] = auxiliar_value[aa, bb]
 
             if j > 2:
-                aux_same = aux_same - k3 * np.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i, j - 2, x, n_points)*np.eye(3)
-                auxiliar_value = k3 * np.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i, j - 2, x, n_points) * np.eye(3)
+                aux_same = aux_same - k3 * ca.SX.eye(3) + 2 * k3 * l0 / norm_matrix2(i, j, i, j - 2, x, n_points) * ca.SX.eye(3)
+                auxiliar_value = k3 * ca.SX.eye(3) - 2 * k3 * l0 / norm_matrix2(i, j, i, j - 2, x, n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
                         A[pos_v1 + aa, pos_x1 - 12 * n_points + bb] = auxiliar_value[aa, bb]
-
             if i < n_points and j < n_points2:
-                aux_same = aux_same - k2 * np.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j + 1, x,
-                                                                                          n_points) * np.eye(3)
-                auxiliar_value= k2 * np.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j + 1, x, n_points)*np.eye(3)
+                aux_same = aux_same - k2 * ca.SX.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j + 1, x,
+                                                                                           n_points) * ca.SX.eye(3)
+                auxiliar_value = k2 * ca.SX.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j + 1, x,
+                                                                                      n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1 + 6* n_points + 6+ bb] = auxiliar_value[aa, bb]
+                        A[pos_v1 + aa, pos_x1 + 6 * n_points + 6 + bb] = auxiliar_value[aa, bb]
 
             if i > 1 and j > 1:
-                aux_same = aux_same - k2 * np.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j - 1, x,
-                                                                                          n_points) * np.eye(3)
-                auxiliar_value= k2 * np.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j - 1, x, n_points) * np.eye(3)
+                aux_same = aux_same - k2 * ca.SX.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j - 1, x,
+                                                                                           n_points) * ca.SX.eye(3)
+                auxiliar_value = k2 * ca.SX.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j - 1, x,
+                                                                                      n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
-                        A[pos_v1 + aa, pos_x1 - 6* n_points - 6+ bb] = auxiliar_value[aa, bb]
+                        A[pos_v1 + aa, pos_x1 - 6 * n_points - 6 + bb] = auxiliar_value[aa, bb]
 
             if i < n_points and j > 1:
-                aux_same = aux_same - k2 * np.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j - 1, x,
-                                                                                          n_points) * np.eye(3)
-                auxiliar_value = k2 * np.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j - 1, x, n_points) * np.eye(3)
+                aux_same = aux_same - k2 * ca.SX.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j - 1, x,
+                                                                                           n_points) * ca.SX.eye(3)
+                auxiliar_value = k2 * ca.SX.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i + 1, j - 1, x,
+                                                                                      n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
                         A[pos_v1 + aa, pos_x1 - 6 * n_points + 6 + bb] = auxiliar_value[aa, bb]
 
             if i > 1 and j < n_points2:
-                aux_same = aux_same - k2 * np.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j + 1, x,
-                                                                                          n_points) * np.eye(3)
-                auxiliar_value = k2 * np.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j + 1, x, n_points) * np.eye(3)
+                aux_same = aux_same - k2 * ca.SX.eye(3) + k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j + 1, x,
+                                                                                           n_points) * ca.SX.eye(3)
+                auxiliar_value = k2 * ca.SX.eye(3) - k2 * np.sqrt(2) * l0 / norm_matrix2(i, j, i - 1, j + 1, x,
+                                                                                      n_points) * ca.SX.eye(3)
                 for aa in range(3):
                     for bb in range(3):
                         A[pos_v1 + aa, pos_x1 + 6 * n_points - 6 + bb] = auxiliar_value[aa, bb]
-
             for aa in range(3):
                 for bb in range(3):
                     A[pos_v1, pos_x1] = aux_same[aa, bb]
 
-    A = np.nan_to_num(A, nan=0.0)
+    print(A)
     return A
 
 
@@ -427,7 +420,7 @@ def k_dlqr_V2(n_points, n_points2, k, k2, k3, c1, c2, l0, mass_points, m_uav, x_
 
     A = A_linearized(x * 1.02, k, k2, k3, c1, c2, m, l0, n_points, n_points2)
     B = np.zeros((n_points * n_points2 * 6, 3 * n_actuators))
-    B_matrix_3 = np.eye(3)
+    B_matrix_3 = np.eye(3)/m_uav
     for i in range(n_actuators):
         B[6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 3:6 * n_points * (
                     x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 6, 3 * i:3 * (i + 1)] = B_matrix_3
@@ -443,11 +436,21 @@ def k_dlqr_V2(n_points, n_points2, k, k2, k3, c1, c2, l0, mass_points, m_uav, x_
     # Extract the discrete-time system matrices A_d and B_d
     A_d, B_d = sys_discrete.A, sys_discrete.B
 
-    Q = Q_vector[4] * np.eye(6 * n_points * n_points2)  # velocity in z
+    Q = np.eye(6 * n_points * n_points2)  # velocity in z
     for yu in range(1, n_points * n_points2 + 1):
-        Q[6 * yu - 4, 6 * yu - 4] = Q_vector[1]  # Altitude z
         Q[6 * yu - 6:6 * yu - 4, 6 * yu - 6:6 * yu - 4] = Q_vector[0] * np.eye(2)  # x and y
-        Q[6 * yu - 3:6 * yu - 1, 6 * yu - 3:6 * yu - 1] = Q_vector[3] * np.eye(2)  # velocity in x and y
+        Q[6 * yu - 4, 6 * yu - 4] = Q_vector[1]  # Altitude z
+        Q[6 * yu - 3:6 * yu - 1, 6 * yu - 3:6 * yu - 1] = Q_vector[2] * np.eye(2)  # velocity in x and y
+        Q[6 * yu - 1, 6 * yu - 1] = Q_vector[3]  # velocity in z
+    for i in range(n_actuators):
+        index_actuation = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0])
+        Q[index_actuation - 6:index_actuation - 4, index_actuation - 6:index_actuation - 4] = Q_vector[4] * np.eye(
+            2)  # x and y of quads
+        Q[index_actuation - 4, index_actuation - 4] = Q_vector[5]  # Altitude z of quad
+        Q[index_actuation - 3:index_actuation - 1, index_actuation - 3:index_actuation - 1] = Q_vector[6] * np.eye(
+            2)  # velocity in x and y of quads
+        Q[index_actuation - 1, index_actuation - 1] = Q_vector[7]  # velocity in z
+
     R = R_vector[1] * np.eye(3 * n_actuators)  # force in z
     for yi in range(n_actuators):
         R[3 * yi + 1:3 * yi + 3, 3 * yi + 1:3 * yi + 3] = R_vector[0] * np.eye(2)  # force in x and y
@@ -1069,11 +1072,12 @@ def init_MPC_model6(x2, k, k2, k3, c1, c2, l0,
     return mpc
 
 
-def init_MPC_model7(k, k2, k3, c1, c2, l0,
+def init_MPC_model7(x2,k, k2, k3, c1, c2, l0,
                     n_points, n_points2, n_actuators, x_actuators,
                     mass_points, m_uav,
                     Q_vector, R_vector,
                     delta, u_limits, g, xd_save, N_horizon, iota_min, iota_max):
+
     mpc_dt = delta
     n_visible_points = n_actuators
     x_actuators_2 = np.zeros((n_actuators, 3))
@@ -1091,13 +1095,13 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
         for i in range(n_points):
             pos_v = slice(6 * n_points * j + 6 * i + 3, 6 * n_points * j + 6 * i + 6)
             M[pos_v, pos_v] = m[i, j] * np.eye(3)
-            # G[6 * n_points * j + 6 * i + 5] =  mass_points* g
+            #G[6 * n_points * j + 6 * i + 5] =  mass_points*g
             G[6 * n_points * j + 6 * i + 5] = m[i, j] * g
     # print("M:", M)
     # print("G:", G)
 
     B = np.zeros((n_points * n_points2 * 6, 3 * n_actuators))
-    B_matrix_3 = np.eye(3) / m_uav
+    B_matrix_3 = np.eye(3)/m_uav
     for i in range(n_actuators):
         B[6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 3:6 * n_points * (
                 x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0] - 1) + 6, 3 * i:3 * (i + 1)] = B_matrix_3
@@ -1114,7 +1118,9 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
 
     M_inv = np.linalg.inv(M)
 
-    K_spring = K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2)
+    K_spring = K_matrix(1.02*x2, k, k2, k3, c1, c2, l0, n_points, n_points2)
+    #K_spring = K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2)
+
 
     x_next = x + mpc_dt * (M_inv @ ((K_spring@ x)) + B @ u - G)
 
@@ -1134,8 +1140,8 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
         'store_full_solution': False,
         'nlpsol_opts': {
             # 'jit': True,
-            'ipopt.tol': 1e-3,
-            'ipopt.max_iter': 1000,
+            'ipopt.tol': 0.001,
+            'ipopt.max_iter': 100,
             'ipopt.print_level': 0,  # Disable IPOPT printing
             'ipopt.ma57_automatic_scaling': 'no',  # Enable MA57 auto scaling
             'ipopt.sb': 'yes',  # Enable silent barrier mode
@@ -1146,17 +1152,43 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
 
     mpc.set_param(**setup_mpc)
 
+    ''' 
+    Q = np.eye(6 * n_points * n_points2)  # velocity in z
+    for yu in range(1, n_points * n_points2 + 1):
+        Q[6 * yu - 6, 6 * yu - 6] = Q_vector[0]   # x
+        Q[6 * yu - 5, 6 * yu - 5] = Q_vector[1]  # x
+        Q[6 * yu - 4, 6 * yu - 4] = Q_vector[2]  # Altitude z
+        Q[6 * yu - 3:6 * yu - 1, 6 * yu - 3:6 * yu - 1] = Q_vector[3] * np.eye(2)  # velocity in x and y
+        Q[6 * yu - 1, 6 * yu - 1] = Q_vector[4]   # velocity in z
+
+    for i in range(n_actuators):
+        index_actuation = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0])
+        Q[index_actuation - 6:index_actuation - 4, index_actuation - 6:index_actuation - 4] = Q_vector[5] * np.eye(2)  # x and y of quads
+        Q[index_actuation - 4, index_actuation - 4] = Q_vector[6]  # Altitude z of quad
+        Q[index_actuation - 3, index_actuation - 3] = Q_vector[7] # velocity in x
+        Q[index_actuation - 2, index_actuation - 2] = Q_vector[8] # velocity in y
+        Q[index_actuation - 1, index_actuation - 1] = Q_vector[9]  # velocity in z
+
+
+    R = R_vector[2] * np.eye(3 * n_actuators)  # force in z
+    for yi in range(n_actuators):
+        R[3 * yi + 1, 3 * yi + 1] = R_vector[0] # force in x and y
+        R[3 * yi + 2, 3 * yi + 2] = R_vector[1]  # force in x and y
+    '''
+
     Q = np.eye(6 * n_points * n_points2)  # velocity in z
     for yu in range(1, n_points * n_points2 + 1):
         Q[6 * yu - 6:6 * yu - 4, 6 * yu - 6:6 * yu - 4] = Q_vector[0] * np.eye(2)  # x and y
         Q[6 * yu - 4, 6 * yu - 4] = Q_vector[1]  # Altitude z
         Q[6 * yu - 3:6 * yu - 1, 6 * yu - 3:6 * yu - 1] = Q_vector[2] * np.eye(2)  # velocity in x and y
-        Q[6 * yu - 1, 6 * yu - 1] = Q_vector[3]   # velocity in z
+        Q[6 * yu - 1, 6 * yu - 1] = Q_vector[3]  # velocity in z
     for i in range(n_actuators):
         index_actuation = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0])
-        Q[index_actuation - 6:index_actuation - 4, index_actuation - 6:index_actuation - 4] = Q_vector[5] * np.eye(2)  # x and y of quads
+        Q[index_actuation - 6:index_actuation - 4, index_actuation - 6:index_actuation - 4] = Q_vector[4] * np.eye(
+            2)  # x and y of quads
         Q[index_actuation - 4, index_actuation - 4] = Q_vector[5]  # Altitude z of quad
-        Q[index_actuation - 3:index_actuation - 1, index_actuation - 3:index_actuation - 1] = Q_vector[6] * np.eye(2)  # velocity in x and y of quads
+        Q[index_actuation - 3:index_actuation - 1, index_actuation - 3:index_actuation - 1] = Q_vector[6] * np.eye(
+            2)  # velocity in x and y of quads
         Q[index_actuation - 1, index_actuation - 1] = Q_vector[7]  # velocity in z
 
     R = R_vector[1] * np.eye(3 * n_actuators)  # force in z
@@ -1165,27 +1197,40 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
 
     # Stage cost: (x - x_ref)^2 + lambda * u^2
     mterm = 0*(x - x_ref).T @ Q @ (x - x_ref)  # Terminal cost (optional)
-    lterm = (x - x_ref).T @ Q @ (x - x_ref)  # Stage cost
+    lterm = (x - x_ref).T @ Q @ (x - x_ref) + u.T @ R @ u # Stage cost
 
     mpc.set_objective(mterm=mterm, lterm=lterm)
-    mpc.set_rterm(u.T @ R @ u)  # Regularization
+    mpc.set_rterm(u=0)  # Regularization
 
     # Input constraints
+
     mpc.bounds['lower', '_u', 'u'] = np.tile(np.array([u_limits[0, 0], u_limits[1, 0], u_limits[2, 0]]),
                                              n_actuators)
     mpc.bounds['upper', '_u', 'u'] = np.tile(np.array([u_limits[0, 1], u_limits[1, 1], u_limits[2, 1]]),
                                              n_actuators)
 
+
     tvp_template = mpc.get_tvp_template()
 
     def tvp_fun(t_now):
-        for k in range(N_horizon + 1):
+        for k in range(N_horizon):
+            print(k)
             tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt + k)]
-
+            '''
+            if k == N_horizon - 1:
+                tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt-2)]
+            elif k == N_horizon - 2:
+                tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt-2)]
+            elif k == N_horizon - 3:
+                tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt-3)]
+            elif k == N_horizon - 4:
+                tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt-3 )]
+            else:
+                tvp_template['_tvp', k, 'x_ref'] = xd_save[:, int(t_now / mpc_dt-3 )]
+            '''
         return tvp_template
 
     mpc.set_tvp_fun(tvp_fun)
-    #mpc.set_nl_cons('n_length_con', expr = ca.norm_2(x[0:3] - x[6 * 7 - 6: 6 * 7 - 3]), ub=0.975)
 
 
     for i in range(n_actuators-1):
@@ -1196,7 +1241,6 @@ def init_MPC_model7(k, k2, k3, c1, c2, l0,
             distance_expr = ca.norm_2(x[index_i: index_i + 3] - x[index_j: index_j + 3])
             mpc.set_nl_cons(f'n_length_con_{i}_{j}', expr=distance_expr , ub=iota_max*length_i_j)
             mpc.set_nl_cons(f'n_length_con_lb_{i}_{j}', expr=-distance_expr, ub=-iota_min * length_i_j)
-
     return mpc
 
 
@@ -1270,7 +1314,7 @@ def init_MPC_0(k, k2, k3, c1, c2, l0,
             'ipopt.ma57_automatic_scaling': 'no',  # Enable MA57 auto scaling
             'ipopt.sb': 'yes',  # Enable silent barrier mode
             'print_time': 0,  # Disable solver timing information
-            'ipopt.linear_solver': 'ma27'  # Use a faster linear solver
+            'ipopt.linear_solver': 'ma57'  # Use a faster linear solver
         }
     }
 
@@ -1652,10 +1696,10 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     H, R_h_var, s_h = matrix_H_3D_ca2(x_b, c_b)
 
-    alpha_H = 200
+    alpha_H = 2000
     alpha_G = 70
     #alpha_Rs = 5500
-    alpha_Rs = 18000
+    alpha_Rs = 2500
 
     # Control laws
     e_H = H @ c_b - x_b
@@ -1672,7 +1716,7 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     #Q_0 = 250000000*np.eye(6)
 
-    Q_0 = 10000000 * np.eye(6)
+    Q_0 = 20000000 * np.eye(6)
 
     Q_0[3:5, 3:5] = 2 * np.eye(2)
 
@@ -1702,6 +1746,7 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
         return tvp_template
 
     mpc.set_tvp_fun(tvp_fun)
+
     for i in range(n_actuators-1):
         for j in range(i+1,n_actuators):
             index_i = 6 * n_points * (x_actuators[i, 1] - 1) + 6 * (x_actuators[i, 0]-1)

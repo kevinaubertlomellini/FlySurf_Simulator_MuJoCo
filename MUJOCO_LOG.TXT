@@ -154,3 +154,21 @@ WARNING: Pre-allocated visual geom buffer is full. Increase maxgeom above 2000. 
 Wed Feb 12 18:19:53 2025
 WARNING: Pre-allocated visual geom buffer is full. Increase maxgeom above 2000. Time = 0.0040.
 
+Tue Mar 25 17:00:55 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 0. The simulation is unstable. Time = 1.8000.
+
+Sun Mar 30 16:46:04 2025
+WARNING: Nan, Inf or huge value in QACC at DOF 1123. The simulation is unstable. Time = 0.1050.
+
+Tue Apr  1 21:00:51 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 0. The simulation is unstable. Time = 8.4000.
+
+Tue Apr  1 21:21:01 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 0. The simulation is unstable. Time = 8.4000.
+
+Tue Apr  1 21:22:01 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 0. The simulation is unstable. Time = 8.4000.
+
+Wed Apr  2 10:49:04 2025
+WARNING: Nan, Inf or huge value in QACC at DOF 948. The simulation is unstable. Time = 0.1050.
+

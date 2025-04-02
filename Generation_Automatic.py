@@ -271,7 +271,7 @@ def generate_xml2(rows, cols, x_init, y_init, x_length, y_length, quad_positions
                 body_template = f"""
     <body name="quad_{element_counter}" pos="{x_pos:.4f} {y_pos:.4f} 0.05" childclass="x2">
         <joint type="free" damping="{damp_quad}"/>
-        <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+        <geom material="phong3SG" mesh="X2_lowpoly" class="visual" pos=".006 0 .02" quat="0 0 1 1"/>
         <geom class="collision" size=".009 .00405 .003" pos=".006 0 .003"/>
         <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
         <geom class="collision" size=".0075 .00405 .003" pos="-.0105 0 .00975"/>

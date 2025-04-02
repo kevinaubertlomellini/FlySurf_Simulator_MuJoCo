@@ -228,6 +228,57 @@ def shape_controller_3D_V2(alpha_H, alpha_G, alpha_0, alpha_Hd, x, n_points, c, 
     # Reshape to (3*n_points,)
     return [u.flatten(order='F').reshape(-1, 1), np.array([np.mean(np.abs(alpha_H*u_H)),np.mean(np.abs(alpha_G*u_G)),np.mean(np.abs(u_0)),np.mean(np.abs(u_Hd))])]
 
+def shape_controller_3D_V3(alpha_H, alpha_G, alpha_Hd, x, n_points, c, R_d, s_d, c_0):
+    """
+    Python version of the shape_controller_3D function.
+
+    Parameters:
+    alpha_H, alpha_G, alpha_0, alpha_Hd : float
+        Control parameters.
+    x : numpy.ndarray
+        Current positions, reshaped as a (3, n_points) array.
+    n_points : int
+        Number of points.
+    c : numpy.ndarray
+        Desired positions, reshaped as a (3, n_points) array.
+    R_d : numpy.ndarray
+        Desired rotation matrix (3x3).
+    s_d : float
+        Desired scaling factor.
+    c_0 : numpy.ndarray
+        Desired centroid position (3,).
+
+    Returns:
+    numpy.ndarray
+        Control input reshaped as a (3*n_points,) array.
+    """
+    # Reshape x and c to (3, n_points)
+    x = x.reshape((3, n_points), order='F')
+    c = c.reshape((3, n_points), order='F')
+    # Compute centroids
+    x_0 = np.mean(x, axis=1, keepdims=True)  # Centroid of x
+    c_00 = np.mean(c, axis=1, keepdims=True)  # Centroid of c
+
+    # Compute shapes (subtract centroids)
+    x_b = x - x_0
+    c_b = c - c_00
+
+    # Compute H, R_h, s_h using matrix_H_3D function
+    H, R_h, s_h = matrix_H_3D(x_b, c_b)
+
+    # Control laws
+    u_H = H @ c_b - x_b
+    G = x_b @ np.linalg.pinv(c_b)
+    u_G = G @ c_b - x_b
+    Hd = s_d * R_d
+    u_Hd = alpha_Hd * (Hd @ c_b - x_b)
+
+    u_y = alpha_H * u_H + alpha_G * u_G + u_Hd
+
+
+    # Reshape to (3*n_points,)
+    return u_y.flatten(order='F').reshape(-1, 1)
+
 
 def compute_gamma(n_points, c, R_d, s_d, c_0):
     c = c.reshape((3, n_points), order='F')
@@ -235,6 +286,7 @@ def compute_gamma(n_points, c, R_d, s_d, c_0):
     c_b = c - c_00
     x_gamma = s_d * R_d @ c_b + c_0.reshape(3, 1)
     return x_gamma.flatten(order='F').reshape(-1, 1)
+
 
 
 def matrix_H_3D(Q_b, C_b):
@@ -367,6 +419,32 @@ def init_simulator(quad_positions, spacing_factor):
     n_actuators = x_actuators.shape[0]
     return [x_actuators, n_actuators]
 
+
+def shape_semi_cylinder_arc(sides, amplitude, center, radius, n_points):
+    y_g = np.linspace(-sides/2, sides/2, n_points[1])  # Uniform distribution along Y
+    theta = np.linspace(-np.pi, 0, n_points[0])  # Equal spacing along the arc
+
+    # Convert from polar to Cartesian coordinates
+    x_g_vector0 = radius * np.cos(theta) + center[0]
+    z_g_vector0 = amplitude * np.sin(theta)  # Scale by amplitude
+
+    # Repeat along the y-direction to form a surface
+    X, Y = np.meshgrid(x_g_vector0, y_g)
+    Z = np.tile(z_g_vector0, (n_points[1], 1))
+
+    '''
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(X.flatten(), Y.flatten(), -Z.flatten(), 'k')  # Single black line
+    ax.scatter(X.flatten(), Y.flatten(), -Z.flatten(),  color='r')
+
+    ax.set_xlabel('x')
+    '''
+
+    shape = np.vstack((X.flatten(),Y.flatten(),-Z.flatten())).T.flatten()
+
+    return shape
+
 def shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
     # Generate mesh grid for x and y coordinates
     x_g = np.linspace(-sides[0]/2, sides[0]/2, n_points[0])
@@ -380,7 +458,7 @@ def shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
     Amp = amplitude # Amplitude
     x0 = center[0] # Center of Gaussian in x
     y0 = center[1] # Center of Gaussian in y
-    sigma_x = sd[0]  # Standard deviation in x
+    sigma_x = sd[0] # Standard deviation in x
     sigma_y = sd[1] # Standard deviation in y
 
     # Calculate the 2D Gaussian
@@ -390,7 +468,6 @@ def shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
     # Combine into shape_gaussian
     shape_gaussian = np.vstack((x_g_vector0, y_g_vector0, z_g_vector0)).T.flatten()
     return shape_gaussian
-
 
 def inverted_shape_gaussian_mesh(sides, amplitude, center, sd, n_points):
     # Generate mesh grid for x and y coordinates

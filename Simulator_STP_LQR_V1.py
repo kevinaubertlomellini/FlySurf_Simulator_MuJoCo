@@ -17,7 +17,7 @@ from LQR_MPC_functions import *
 # SHAPE TRAJECTORY PLANNER + NONLINEAR MPC
 
 # FLYSURF SIMULATOR PARAMETERS
-rows = 17 # Number of rows (n-1)/(spacing+1)
+rows = 9 # Number of rows (n-1)/(spacing+1)
 cols = rows # Number of columns
 x_init = -0.5 # Position of point in x (1,1)
 y_init = -0.5 # Position of point in y (1,1)
@@ -30,8 +30,8 @@ g = 9.81 # Gravity value
 
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
 #quad_positions = [[x, y] for x, y in itertools.product(range(1, rows+1), repeat=2)]
-quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
-#quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
+#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
+quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 mass_total = 0.1
 mass_points = mass_total/(rows*cols) # Mass of each point0
 mass_quads = 0.07 # Mass of each UAV
@@ -45,7 +45,7 @@ max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
 
 iota_min = 0.5
-iota_max = 1.2
+iota_max = 1.5
 
 # Generate xml simulation  file
 [model, data] = generate_xml2(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, T_s, u_limits, max_l_str, max_l_shear, max_l_flex, file_path)
@@ -58,7 +58,7 @@ spacing_factor = 1
 x_spacing = x_length / (cols - 1)  # Adjusted for the correct number of divisions
 y_spacing = y_length / (rows - 1)  # Adjusted for the correct number of divisions
 
-delta_factor = 10
+delta_factor = 25
 delta = delta_factor*T_s
 time_change = 3
 n_tasks = 2
@@ -70,9 +70,9 @@ n_points2 = int((cols+ spacing_factor)/(spacing_factor+1))
 l0= (spacing_factor+1)*x_spacing
 iter = int(time_step_num/delta_factor)
 
-N_horizon = 8
+N_horizon = 10
 
-[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save] = init_vectors2(n_actuators, [rows, cols], iter, [n_points, n_points2], 10*N_horizon )
+[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save] = init_vectors2(n_actuators, [rows, cols], iter, [n_points, n_points2], N_horizon )
 
 x = np.zeros((n_points * n_points2 * 6,1))
 for i in range(n_points):
@@ -93,12 +93,6 @@ xd[0::6] = xd[0::6] - 0.5
 xd[1::6] = xd[1::6] - 0.5
 xd[2::6] = 0
 xd_iter = xd.copy()
-
-# CONTROL PARAMETERS
-Q_vector = [1800, 1800, 0, 0, 0.1, 0.1, 0, 0] # [x and y, z, v_x and v_y, v_z, x_UAV and y_UAV, z_UAV , v_x_quad and v_y_quad, v_z_quad]
-R_vector = [5, 5] # [force in x and y, force in z]
-
-
 
 u_gravity = u_gravity_forces(n_UAVs = n_actuators, mass_points = mass_points, mass_UAVs = mass_quads, rows =rows, cols=cols, g= g)
 
@@ -142,7 +136,8 @@ for ii in range(iter+N_horizon+1):
 
         if time_change >= ii * delta_factor * T_s:
             sep = iter / n_tasks
-            c_0 = np.array([0.0, 0.0, 0.05 + 0.65 * ii / sep])
+            #c_0 = np.array([0.0 + 0.3 * ii / sep, 0.0, 0.05 + 0.65 * ii / sep])
+            c_0 = np.array([0.0 , 0.0, 0.05 + 0.65 * ii / sep])
         if (time_change < 1.0 * ii * delta_factor * model.opt.timestep) and (2.0 * time_change >= ii * delta_factor * T_s):
             sep = time_change / T_s / delta_factor
             #R_d = rotation_matrix(0, 0 + np.pi / 12 * (ii - sep) / sep, 0)
@@ -186,12 +181,11 @@ for ii in range(iter+N_horizon+1):
     shape_00 = np.mean(shape_3, axis=1, keepdims=True)  # Centroid of c
     shape_save[:, :, ii] = shape_3 - shape_00
 
-mpc = init_MPC_model7(x,str_stif,shear_stif,flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_vector, R_vector, delta, u_limits, g, xd_sampled, N_horizon, iota_min, iota_max)
-mpc.setup()
-mpc.x0 = x
-mpc.set_initial_guess()
-u_mpc = mpc.make_step(x)
+# CONTROL PARAMETERS
+Q_vector = [1500, 700, 0, 0, 0, 0, 0, 0] # [x and y, z, v_x and v_y, v_z, x_UAV and y_UAV, z_UAV , v_x_quad and v_y_quad, v_z_quad]
+R_vector = [75, 75] # [force in x and y, force in z]
 
+K = k_dlqr_V2(n_points,n_points2,str_stif,shear_stif,flex_stif,damp_point,damp_quad,l0,mass_points,mass_quads,x_actuators,x,Q_vector,R_vector,delta)
 
 with mujoco.viewer.launch_passive(model, data) as viewer:
     if not glfw.init():
@@ -254,10 +248,11 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             start_time = time.time()  # Record start time
 
-            u_mpc = mpc.make_step(xe)
+            xd = np.expand_dims(xd_sampled[:, int(time_num / delta_factor)], axis=1)
 
-            #u_mpc[2::3] = 5*u_mpc[2::3]
-            u = u_mpc + u_gravity # Compute control inputs for all drones
+            u_lqr = np.dot(K, (xd - xe))
+
+            u = u_lqr + u_gravity  # Compute control inputs for all drones
 
             # Enforce actuator limits
             for kv in range(1, n_actuators + 1):
@@ -270,7 +265,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             data.ctrl[:] = u.flatten()
             step_time_save[0,int(time_num/delta_factor)] = elapsed_time
-            u_save[:, int(time_num/delta_factor)] = u_mpc.flatten()
+            u_save[:, int(time_num/delta_factor)] = u_lqr.flatten()
             x_save[:, int(time_num/delta_factor)] = x_iter.flatten()
             xe_save[:, int(time_num/delta_factor)] = xe_iter.flatten()
             t_save[int(time_num/delta_factor)] = time_num*T_s
@@ -323,7 +318,7 @@ step = int(time_num/delta_factor)
 
 base_directory = "/home/marhes_1/FLYSOM/Data/Simulation"
 experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-experiment_directory = os.path.join(base_directory,f"STP_MPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
+experiment_directory = os.path.join(base_directory,f"LQR_MPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
 os.makedirs(experiment_directory, exist_ok=True)
 
 plot_positions(t_save[0:step-1], x_save[:,0:step-1], xd_save[:,0:step-1], quad_positions, rows, n_actuators, experiment_directory)
