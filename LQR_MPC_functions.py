@@ -1095,8 +1095,8 @@ def init_MPC_model7(x2,k, k2, k3, c1, c2, l0,
         for i in range(n_points):
             pos_v = slice(6 * n_points * j + 6 * i + 3, 6 * n_points * j + 6 * i + 6)
             M[pos_v, pos_v] = m[i, j] * np.eye(3)
-            #G[6 * n_points * j + 6 * i + 5] =  mass_points*g
-            G[6 * n_points * j + 6 * i + 5] = m[i, j] * g
+            G[6 * n_points * j + 6 * i + 5] =  mass_points*g
+            #G[6 * n_points * j + 6 * i + 5] =  m[i, j] * g
     # print("M:", M)
     # print("G:", G)
 
@@ -1606,9 +1606,9 @@ def init_MPC_shape(k, k2, k3, c1, c2, l0,
 
     return mpc
 
-def init_MPC_general(k, k2, k3, c1, c2, l0,
+def init_MPC_general(x2, k, k2, k3, c1, c2, l0,
                     n_points, n_points2, n_actuators, x_actuators,
-                    mass_points, m_uav, R_vector,
+                    mass_points, m_uav, Q_0, alpha_H , alpha_G, alpha_Rs,  R_vector,
                     delta, u_limits, g, Rs_d_save, shape_save, xd_0_save, N_horizon, iota_min, iota_max):
     mpc_dt = delta
     x_actuators_2 = np.zeros((n_actuators, 3))
@@ -1626,8 +1626,8 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
         for i in range(n_points):
             pos_v = slice(6 * n_points * j + 6 * i + 3, 6 * n_points * j + 6 * i + 6)
             M[pos_v, pos_v] = m[i, j] * np.eye(3)
-            G[6 * n_points * j + 6 * i + 5] =  mass_points* g
-            #G[6 * n_points * j + 6 * i + 5] = m[i, j] * g
+            #G[6 * n_points * j + 6 * i + 5] =  mass_points* g
+            G[6 * n_points * j + 6 * i + 5] = 2* m[i, j] * g
     # print("M:", M)
     # print("G:", G)
 
@@ -1650,7 +1650,8 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     M_inv = np.linalg.inv(M)
 
-    K_spring = K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2)
+    #K_spring = K_matrix2(x, k, k2, k3, c1, c2, l0, n_points, n_points2)
+    K_spring = K_matrix(1.02*x2, k, k2, k3, c1, c2, l0, n_points, n_points2)
 
     x_next = x + mpc_dt * (M_inv @ ((K_spring@ x)) + B @ u - G)
 
@@ -1695,10 +1696,6 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     H, R_h_var, s_h = matrix_H_3D_ca2(x_b, c_b)
 
-    alpha_H = 2000
-    alpha_G = 70
-    #alpha_Rs = 5500
-    alpha_Rs = 2500
 
     # Control laws
     e_H = H @ c_b - x_b
@@ -1713,21 +1710,14 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     Q = np.eye(3*n_points*n_points2)  # velocity in z
 
-    #Q_0 = 250000000*np.eye(6)
 
-    Q_0 = 20000000 * np.eye(6)
-
-    Q_0[3:5, 3:5] = 2 * np.eye(2)
-
-    Q_0[5, 5] = 2
-
-    lterm = alpha_H*(e_H).T @ Q @ (e_H) + alpha_G*(a).T @ Q @ (a) + alpha_Rs*(e_Rs).T @ Q @ (e_Rs) + (x_0 - x_ref_0).T @ Q_0 @ (x_0 - x_ref_0)# Stage cost
+    lterm = alpha_H*(e_H).T @ Q @ (e_H) + alpha_G*(a).T @ Q @ (a) + alpha_Rs*(e_Rs).T @ Q @ (e_Rs) + (x_0 - x_ref_0).T @ Q_0 @ (x_0 - x_ref_0) + u.T @ R @ u# Stage cost
 
     mterm = 0*lterm  # Terminal cost (optional)
 
     mpc.set_objective(mterm=mterm, lterm=lterm)
     #mpc.set_rterm(u=0.1)  # Regularization
-    mpc.set_rterm(u.T @ R @ u)  # Regularization
+    mpc.set_rterm(u=0)  # Regularization
 
     # Input constraints
     mpc.bounds['lower', '_u', 'u'] = np.tile(np.array([u_limits[0, 0], u_limits[1, 0], u_limits[2, 0]]),
@@ -1739,9 +1729,9 @@ def init_MPC_general(k, k2, k3, c1, c2, l0,
 
     def tvp_fun(t_now):
         for k in range(N_horizon + 1):
-            tvp_template['_tvp', k, 'c_b'] = shape_save[:, :, int(t_now / mpc_dt + k-1)]
-            tvp_template['_tvp', k, 'Hd'] = Rs_d_save[:, :, int(t_now / mpc_dt + k - 1)]
-            tvp_template['_tvp', k, 'x_ref_0'] = xd_0_save[:, int(t_now / mpc_dt + k - 1)]
+            tvp_template['_tvp', k, 'c_b'] = shape_save[:, :, int(t_now / mpc_dt + k)]
+            tvp_template['_tvp', k, 'Hd'] = Rs_d_save[:, :, int(t_now / mpc_dt + k)]
+            tvp_template['_tvp', k, 'x_ref_0'] = xd_0_save[:, int(t_now / mpc_dt + k )]
         return tvp_template
 
     mpc.set_tvp_fun(tvp_fun)

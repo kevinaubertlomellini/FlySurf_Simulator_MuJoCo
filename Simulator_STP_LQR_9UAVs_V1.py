@@ -41,11 +41,11 @@ quad_positions2 = quad_positions
 mass_total = 0.1
 mass_points = mass_total/(rows*cols) # Mass of each point0
 mass_quads = 0.07 # Mass of each UAV
-damp_point = 0.01 # Damping coefficient on each point
-damp_quad = 0.6 # Damping coefficient on each UAV
+damp_point = 0.005 # Damping coefficient on each point
+damp_quad = 0.6# Damping coefficient on each UAV
 T_s = 0.005 # Simulator step
 u_limits = np.array([[-2.0, 2.0], [-2.0, 2.0], [-0.5, 10.0]]) # Actuator limits
-max_l_str = 0.03  # Maximum elongation from the natural length of the structural springs
+max_l_str = 0.001  # Maximum elongation from the natural length of the structural springs
 max_l_shear = 2*max_l_str  # Maximum elongation from the natural length of the shear springs
 max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the flexion springs
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
@@ -132,7 +132,7 @@ for i in range(1,n_points+1):
 #print('i',indices)
 indices2 = [i-1 for i in indices]
 
-flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.0025, num_sample_per_curve=rows2)
+flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.002, num_sample_per_curve=rows2)
 
 [points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
 
@@ -216,7 +216,7 @@ for ii in range(iter+N_horizon+1):
     Rs_d_save[:, :, ii] = s_d * R_d
     xd_sampled[:, ii] = xd.flatten()
 
-    shape_3 = shape.reshape((3, rows * cols), order='F')
+    shape_3 = xd_pos.reshape((3, rows * cols), order='F')
     shape_00 = np.mean(shape_3, axis=1, keepdims=True)  # Centroid of c
     shape_save[:, :, ii] = shape_3 - shape_00
 
@@ -224,7 +224,8 @@ spring_factor = 2
 # CONTROL PARAMETERS
 
 Q_vector = np.array([1050, 220, 0, 0, 10, 10, 0, 0])
-R_vector = [950, 475]
+R_vector = 0.5*np.array([750, 275])
+
 K = k_dlqr_V2(n_points,n_points2,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,mass_points,mass_quads,x_actuators,x,Q_vector,R_vector,delta)
 
 with mujoco.viewer.launch_passive(model, data) as viewer:

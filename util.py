@@ -560,6 +560,22 @@ def init_vectors3(n_actuators, n_points, iter, n_points_sampled, N_horizon ):
     shape_sampled_save = np.zeros((3, n_points_sampled[0] * n_points_sampled[1], iter + N_horizon + 1))
     return [u_save, x_save, xe_save,step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save, shape_sampled_save]
 
+def init_vectors4(n_actuators, n_points, iter, n_points_sampled, N_horizon ):
+    u_save = np.zeros((3 * n_actuators, iter+1))
+    x_save = np.zeros((6 * n_points[0] * n_points[1], iter+1))
+    x_gamma_save = np.zeros((3 * n_points[0] * n_points[1], iter+1))
+    xd_save = np.zeros((6 * n_points[0] * n_points[1], iter+1))
+    xe_save = np.zeros((6 * n_points[0] * n_points[1], iter+1))
+    step_time_save = np.zeros((1, iter+1))
+    u_components_save = np.zeros((4, iter+1))
+    xd_sampled = np.zeros((6 * n_points_sampled[0] * n_points_sampled[1], iter+N_horizon+1))
+    t_save = np.zeros((iter+1, 1))
+    xd_0_save = np.zeros((6, iter + N_horizon + 1))
+    Rs_d_save = np.zeros((3, 3, iter + N_horizon + 1))
+    shape_save = np.zeros((3, n_points[0] * n_points[1], iter + N_horizon + 1))
+    shape_sampled_save = np.zeros((3, n_points_sampled[0] * n_points_sampled[1], iter + N_horizon + 1))
+    return [u_save, x_save, xd_save, xe_save,step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save, shape_sampled_save]
+
 
 def plot_errors(t, iter, xd_save, xe_save, x_gamma, n_tasks):
     e_save = np.zeros((iter, 1))

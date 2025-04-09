@@ -28,9 +28,9 @@ shear_stif = 4.0 # Stifness of shear springs
 flex_stif = 4.0 # Stifness of flexion springs
 g = 9.81 # Gravity value
 
-#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
+quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
 #quad_positions = [[x, y] for x, y in itertools.product(range(1, rows+1), repeat=2)]
-quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
+#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 
 rows2 = 17 # Number of rows (n-1)/(spacing+1)
@@ -41,11 +41,11 @@ quad_positions2 = quad_positions
 mass_total = 0.1
 mass_points = mass_total/(rows*cols) # Mass of each point0
 mass_quads = 0.07 # Mass of each UAV
-damp_point = 0.005 # Damping coefficient on each point
+damp_point = 0.01 # Damping coefficient on each point
 damp_quad = 0.6 # Damping coefficient on each UAV
 T_s = 0.005 # Simulator step
 u_limits = np.array([[-2.0, 2.0], [-2.0, 2.0], [-0.5, 10.0]]) # Actuator limits
-max_l_str = 0.001  # Maximum elongation from the natural length of the structural springs
+max_l_str = 0.001 # Maximum elongation from the natural length of the structural springs
 max_l_shear = 2*max_l_str  # Maximum elongation from the natural length of the shear springs
 max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the flexion springs
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
@@ -78,7 +78,7 @@ iter = int(time_step_num/delta_factor)
 
 N_horizon = 5
 
-[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save] = init_vectors2(n_actuators, [rows, cols], iter, [n_points, n_points2], 10*N_horizon )
+[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save, shape_sampled_save] = init_vectors4(n_actuators, [rows, cols], iter, [n_points, n_points2], 10*N_horizon )
 
 x = np.zeros((n_points * n_points2 * 6,1))
 for i in range(n_points):
@@ -134,7 +134,7 @@ for i in range(1,n_points+1):
 #print('i',indices)
 indices2 = [i-1 for i in indices]
 
-flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) - 0.002, num_sample_per_curve=rows2)
+flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.001, num_sample_per_curve=rows2)
 
 [points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
 
@@ -218,17 +218,41 @@ for ii in range(iter+N_horizon+1):
     Rs_d_save[:, :, ii] = s_d * R_d
     xd_sampled[:, ii] = xd.flatten()
 
-    shape_3 = shape.reshape((3, rows * cols), order='F')
+    shape_3 = xd_pos.reshape((3, rows * cols), order='F')
     shape_00 = np.mean(shape_3, axis=1, keepdims=True)  # Centroid of c
+    shape_sampled_save[:, :, ii] = ((shape_3 - shape_00).T)[indices2].T
     shape_save[:, :, ii] = shape_3 - shape_00
 
-
 spring_factor = 25
-# CONTROL PARAMETERS
-Q_vector = [1800, 1500, 0, 0, 0, 0, 0, 0] # [x and y, z, v_x and v_y, v_z, x_UAV and y_UAV, z_UAV , v_x_quad and v_y_quad, v_z_quad]
-R_vector = [370, 370] # [force in x and y, force in z]
 
-K = k_dlqr_V2(n_points,n_points2,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,mass_points,mass_quads,x_actuators,x,Q_vector,R_vector,delta)
+alpha_H = 0
+alpha_G = 0
+alpha_Rs = 0
+Q_0 = 2100000 * np.eye(6)
+Q_0[0:2, 0:2] = 1200000* np.eye(2)
+Q_0[3:5, 3:5] = 0 * np.eye(2)
+Q_0[5, 5] = 0
+R_vector =10*np.array([95, 140])
+
+mpc_0 = init_MPC_general(x,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_0, alpha_H , alpha_G, alpha_Rs,  R_vector, delta, u_limits, g, Rs_d_save, shape_sampled_save, xd_0_save, N_horizon, iota_min, iota_max)
+mpc_0.setup()
+mpc_0.x0 = x
+mpc_0.set_initial_guess()
+
+alpha_H = 5100
+alpha_G = 70*0
+alpha_Rs = 6500000
+Q_0 = 0 * np.eye(6)
+R_vector =5*np.array([110, 350])
+
+mpc_Rs = init_MPC_general(x,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_0, alpha_H , alpha_G, alpha_Rs,  R_vector, delta, u_limits, g, Rs_d_save, shape_sampled_save, xd_0_save, N_horizon, iota_min, iota_max)
+mpc_Rs.setup()
+mpc_Rs.x0 = x
+mpc_Rs.set_initial_guess()
+
+
+u_mpc = mpc_0.make_step(x) + mpc_Rs.make_step(x)
+
 
 with mujoco.viewer.launch_passive(model, data) as viewer:
     if not glfw.init():
@@ -242,8 +266,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         raise Exception("Could not create GLFW window")
         
     glfw.make_context_current(window)
-    viewer.cam.lookat = [0.3, -0.65, 1]  # Move camera target in the [x, y, z] direction
-    viewer.cam.distance = 2.0  # Zoom out
+    viewer.cam.lookat = [-0.5, -0.75, 1]  # Move camera target in the [x, y, z] direction
+    viewer.cam.distance = 2.4  # Zoom out
     viewer.cam.azimuth = 90  # Change azimuth angle
     viewer.cam.elevation = -30  # Change elevation angle
     viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = 0
@@ -278,24 +302,24 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             points = np.array([states[i] for i in quad_indices2])
 
             if time_num==0:
-                flysurf.update(points_coord2, points)
-                sampler = FlysurfSampler(flysurf, rows, points, points_coord2)
+                flysurf.update(points_coord3, points)
+                sampler = FlysurfSampler(flysurf, rows, points, points_coord3)
 
-            sampler.flysurf.update(points_coord2, points)
-            all_samples = sampler.sampling_v1(fig, ax, points, coordinates=points_coord2, plot=False)
+            sampler.flysurf.update(points_coord3, points)
+            all_samples = sampler.sampling_v1(fig, ax, points, coordinates=points_coord3, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
             combined = np.hstack((xe_pos[indices2], sampler.vel[indices2]))
+            combined = np.hstack((xe_pos[indices2], vels[indices,:3]))
             xe = combined.flatten().reshape(-1, 1)
 
             xe_iter = np.hstack((xe_pos, sampler.vel)).flatten().reshape(-1, 1)
 
             start_time = time.time()  # Record start time
 
-            xd = np.expand_dims(xd_sampled[:, int(time_num / delta_factor)], axis=1)
+            u_mpc = mpc_0.make_step(xe) + mpc_Rs.make_step(xe)
 
-            u_lqr = np.dot(K, (xd - x))
-
-            u = u_lqr + u_gravity  # Compute control inputs for all drones
+            #u_mpc[2::3] = 5*u_mpc[2::3]
+            u = u_mpc + u_gravity # Compute control inputs for all drones
 
             # Enforce actuator limits
             for kv in range(1, n_actuators + 1):
@@ -308,7 +332,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             data.ctrl[:] = u.flatten()
             step_time_save[0,int(time_num/delta_factor)] = elapsed_time
-            u_save[:, int(time_num/delta_factor)] = u_lqr.flatten()
+            u_save[:, int(time_num/delta_factor)] = u_mpc.flatten()
             x_save[:, int(time_num/delta_factor)] = x_iter.flatten()
             xe_save[:, int(time_num/delta_factor)] = xe_iter.flatten()
             t_save[int(time_num/delta_factor)] = time_num*T_s
@@ -361,7 +385,7 @@ step = int(time_num/delta_factor)
 
 base_directory = "/home/marhes_1/FLYSOM/Data/Simulation"
 experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-experiment_directory = os.path.join(base_directory,f"LQR_MPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
+experiment_directory = os.path.join(base_directory,f"SMPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
 os.makedirs(experiment_directory, exist_ok=True)
 
 plot_positions(t_save[0:step-1], x_save[:,0:step-1], xd_save[:,0:step-1], quad_positions, rows, n_actuators, experiment_directory)

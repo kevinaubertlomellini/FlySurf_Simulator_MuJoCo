@@ -41,11 +41,11 @@ quad_positions2 = quad_positions
 mass_total = 0.1
 mass_points = mass_total/(rows*cols) # Mass of each point0
 mass_quads = 0.07 # Mass of each UAV
-damp_point = 0.01 # Damping coefficient on each point
+damp_point = 0.005 # Damping coefficient on each point
 damp_quad = 0.6 # Damping coefficient on each UAV
 T_s = 0.005 # Simulator step
 u_limits = np.array([[-2.0, 2.0], [-2.0, 2.0], [-0.5, 10.0]]) # Actuator limits
-max_l_str = 0.03  # Maximum elongation from the natural length of the structural springs
+max_l_str = 0.001  # Maximum elongation from the natural length of the structural springs
 max_l_shear = 2*max_l_str  # Maximum elongation from the natural length of the shear springs
 max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the flexion springs
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
@@ -134,7 +134,7 @@ for i in range(1,n_points+1):
 #print('i',indices)
 indices2 = [i-1 for i in indices]
 
-flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.0025, num_sample_per_curve=rows2)
+flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) - 0.002, num_sample_per_curve=rows2)
 
 [points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
 
@@ -225,7 +225,7 @@ for ii in range(iter+N_horizon+1):
 spring_factor = 25
 
 Q_vector = np.array([35000, 25000, 0, 0, 0, 0, 0, 0])
-R_vector = [250, 250]
+R_vector = [200, 200]
 
 
 mpc = init_MPC_model7(x,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_vector, R_vector, delta, u_limits, g, xd_sampled, N_horizon, iota_min, iota_max)
