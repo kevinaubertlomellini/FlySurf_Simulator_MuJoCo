@@ -436,7 +436,7 @@ def shape_semi_cylinder_arc(sides, amplitude, center, radius, n_points):
 
     # Convert from polar to Cartesian coordinates
     x_g_vector0 = radius * np.cos(theta) + center[0]
-    z_g_vector0 = amplitude * np.sin(theta)  # Scale by amplitude
+    z_g_vector0 = amplitude * radius * np.sin(theta)  # Scale by amplitude
 
     # Repeat along the y-direction to form a surface
     X, Y = np.meshgrid(x_g_vector0, y_g)
@@ -700,6 +700,54 @@ def plot_forces(t, u_save, experiment_directory):
 
     plt.tight_layout()
     plt.savefig(os.path.join(experiment_directory, "mpc_forces_plot.png"), dpi=300, bbox_inches='tight')
+
+def plot_forces5(t, u_save, experiment_directory):
+    """
+    Plots the forces over time as three subplots for x, y, and z components.
+
+    Parameters:
+    u_save (numpy array): A 2D array of shape (3 * n_actuators, iter),
+                          where each column represents the forces at a given time step.
+    """
+    if u_save.ndim != 2:
+        raise ValueError("Input u_save must be a 2D array of shape (3 * n_actuators, iter).")
+
+    n_actuators = u_save.shape[0] // 3  # Number of actuators
+    iter_count = u_save.shape[1]  # Number of time steps
+    time_steps = np.arange(iter_count)
+
+    # Extract force components
+    forces_x = u_save[0::3, :]
+    forces_y = u_save[1::3, :]
+    forces_z = u_save[2::3, :]
+
+    # Plot forces over time
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+
+    for i in range(n_actuators):
+        axes[0].plot(t, forces_x[i, :], label=f"Actuator {i + 1}")
+        axes[1].plot(t, forces_y[i, :], label=f"Actuator {i + 1}")
+        axes[2].plot(t, forces_z[i, :], label=f"Actuator {i + 1}")
+
+    # Labels and legends
+    axes[0].set_ylabel("Force X")
+    axes[0].set_title("Forces in X-direction")
+    axes[0].legend()
+    axes[0].grid(True)
+
+    axes[1].set_ylabel("Force Y")
+    axes[1].set_title("Forces in Y-direction")
+    axes[1].legend()
+    axes[1].grid(True)
+
+    axes[2].set_ylabel("Force Z")
+    axes[2].set_title("Forces in Z-direction")
+    axes[2].legend()
+    axes[2].set_xlabel("Time (s)")
+    axes[2].grid(True)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(experiment_directory, "mpc_forces_plot_RS.png"), dpi=300, bbox_inches='tight')
 
 def plot_positions(t, x_save, xd_save, quad_positions, rows, n_actuators, experiment_directory):
     cmap = plt.get_cmap("tab10")

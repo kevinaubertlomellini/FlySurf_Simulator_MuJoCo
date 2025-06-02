@@ -276,7 +276,7 @@ def generate_xml2(rows, cols, x_init, y_init, x_length, y_length, quad_positions
         <geom class="collision" size=".009 .00405 .003" pos=".006 0 .009"/>
         <geom class="collision" size=".0075 .00405 .003" pos="-.0105 0 .00975"/>
         <geom class="collision" size=".00345 .00255 .0015" pos="-.02055 .0012 .00975" quat="1 0 0 1"/>
-        <geom name="point_mass_{element_counter}" type="sphere" size="0.012" pos="0 0 0" mass="{mass_quads}" material="invisible"/>
+        <geom name="point_mass_{element_counter}" type="sphere" size="0.012" pos="0 0 0" mass="{mass_quads+mass_points}" material="invisible"/>
         <site name="ball_{row + 1}_{col + 1}" pos="0 0 0"/>
     </body>
     """
