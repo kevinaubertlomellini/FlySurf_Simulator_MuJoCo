@@ -261,6 +261,7 @@ mpc_Rs.setup()
 mpc_Rs.x0 = x
 mpc_Rs.set_initial_guess()
 
+est_t_save = step_time_save.copy()
 
 u_mpc = mpc_0.make_step(x) + mpc_Rs.make_step(x)
 
@@ -316,6 +317,8 @@ with (mujoco.viewer.launch_passive(model, data) as viewer):
                 flysurf.update(points_coord3, points)
                 sampler = FlysurfSampler(flysurf, rows, points, points_coord3)
 
+            start_time = time.time()
+
             sampler.flysurf.update(points_coord3, points)
             all_samples = sampler.sampling_v1(fig, ax, points, coordinates=points_coord3, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
@@ -324,6 +327,9 @@ with (mujoco.viewer.launch_passive(model, data) as viewer):
             xe = combined.flatten().reshape(-1, 1)
 
             xe_iter = np.hstack((xe_pos, sampler.vel)).flatten().reshape(-1, 1)
+
+            elapsed_time = time.time() - start_time
+            est_t_save[0, int(time_num / delta_factor)] = elapsed_time
 
             start_time = time.time()  # Record start time
 
@@ -404,9 +410,10 @@ plot_positions(t_save[0:step-1], x_save[:,0:step-1], xd_save[:,0:step-1], quad_p
 plot_forces(t_save[0:step-1], u_save[:,0:step-1], experiment_directory)
 plot_errors4(t_save[0:step-1], step-1, x_save[:,0:step-1], xd_save[:,0:step-1], xe_save[:,0:step-1], x_gamma_save[:,0:step-1], experiment_directory)
 plot_components(t_save[0:step-1], xe_save[:,0:step-1], xd_0_save[:,0:step-1], Rs_d_save[:,:,0:step-1], shape_save[:,:,0:step-1], experiment_directory)
-plot_step_time(step-1, step_time_save[:,0:step], experiment_directory)
+plot_step_time(step-1, step_time_save[:,0:step], "Step Time Over Iterations- Controller", "controller_step_time_plot.png", experiment_directory)
+plot_step_time(step-1, est_t_save[:,0:step], "Step Time Over Iterations- Estimator", "estimator_step_time_plot.png", experiment_directory)
 
 # SAVE DATA
-save_data(rows, cols, spacing_factor, n_actuators, step, xe_save, xd_save, x_gamma_save, x_save, xd_0_save, Rs_d_save, shape_save, u_save, t_save, experiment_directory)
+save_data(rows, cols, spacing_factor, n_actuators, step, xe_save, xd_save, x_gamma_save, x_save, xd_0_save, Rs_d_save, shape_save, u_save, t_save, step_time_save, est_t_save,experiment_directory)
 
 plt.show()

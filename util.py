@@ -1298,7 +1298,7 @@ def plot_errors4(t, iter, x_save, xd_save, xe_save, x_gamma, experiment_director
     plt.tight_layout()
     plt.savefig(os.path.join(experiment_directory, "errors_plot.png"), dpi=300, bbox_inches='tight')
 
-def save_data(rows, cols, spacing_factor, n_actuators, step, xe_save, xd_save, x_gamma_save, x_save, xd_0_save, Rs_d_save, shape_save, u_save, t_save, experiment_directory):
+def save_data(rows, cols, spacing_factor, n_actuators, step, xe_save, xd_save, x_gamma_save, x_save, xd_0_save, Rs_d_save, shape_save, u_save, t_save, step_time_save, est_t_save, experiment_directory):
 
     filename = os.path.join(experiment_directory, f"xe.csv")
 
@@ -1345,17 +1345,28 @@ def save_data(rows, cols, spacing_factor, n_actuators, step, xe_save, xd_save, x
     df = pd.DataFrame(t_save[:, 0:step - 1])
     df.to_csv(filename, index=False)
 
+    filename = os.path.join(experiment_directory, f"est_t.csv")
+
+    df = pd.DataFrame(est_t_save[:, 0:step - 1])
+    df.to_csv(filename, index=False)
+
+    filename = os.path.join(experiment_directory, f"control_t.csv")
+
+    df = pd.DataFrame(step_time_save[:, 0:step - 1])
+    df.to_csv(filename, index=False)
+
     print("Data saved")
 
-def plot_step_time(iter, step_time_save, experiment_directory):
+def plot_step_time(iter, step_time_save, title, file,experiment_directory):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(range(iter+1),step_time_save.flatten(), marker='o', linestyle='-')
     ax.axhline(np.mean(step_time_save), color='r', linestyle='--', linewidth=2, label=f"Mean: {np.mean(step_time_save):.2f}")  # Dashed mean line
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Time (s)")
-    ax.set_title("Step Time Over Iterations")
+    ax.set_title(title)
     ax.grid(True)
     ax.set_ylim(0, 1.1*np.max(step_time_save))
     ax.text(iter * 0.7, np.max(step_time_save) * 1.02, f"Mean: {np.mean(step_time_save):.3f}", color='k', fontsize=12)
-    plt.savefig(os.path.join(experiment_directory, "mpc_step_time_plot.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(experiment_directory, file), dpi=300, bbox_inches='tight')
+
