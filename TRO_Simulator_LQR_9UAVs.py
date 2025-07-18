@@ -234,7 +234,6 @@ for ii in range(iter+N_horizon+1):
     shape_00 = np.mean(shape_3, axis=1, keepdims=True)  # Centroid of c
     shape_save[:, :, ii] = shape_3 - shape_00
 
-
 spring_factor = 25
 # CONTROL PARAMETERS
 Q_vector = [180, 110, 0, 0, 25, 25, 0, 0] # [x and y, z, v_x and v_y, v_z, x_UAV and y_UAV, z_UAV , v_x_quad and v_y_quad, v_z_quad]
@@ -298,7 +297,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             start_time = time.time()
 
             sampler.flysurf.update(points_coord2, points)
-            all_samples = sampler.sampling_v1(fig, ax, points, coordinates=points_coord2, plot=False)
+            all_samples = sampler.sampling_v3_curv(fig, ax, points, coordinates=points_coord2, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
             combined = np.hstack((xe_pos[indices2], 0*sampler.vel[indices2]))
             xe = combined.flatten().reshape(-1, 1)

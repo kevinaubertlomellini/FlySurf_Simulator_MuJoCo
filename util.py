@@ -1238,7 +1238,7 @@ def plot_errors4(t, iter, x_save, xd_save, xe_save, x_gamma, experiment_director
         e_est_save[i] = average_hausdorff_distance(pos_e, pos)
         e_est_save2[i] = np.mean(np.linalg.norm(pos_e - pos, axis=1))
         e_real_save[i] = average_hausdorff_distance(pos, pos_d)
-        e_real_save2[i] = np.mean(np.linalg.norm(pos - pos_d, axis=1))
+        e_real_save2[i] = np.mean(np.linalg.norm(pos_e - pos_d, axis=1))
         e_gamma_beta[i] = average_hausdorff_distance(pos, pos_gamma)
         e_gamma_beta2[i] = np.mean(np.linalg.norm(pos - pos_gamma, axis=1))
         e_gamma_des[i] = average_hausdorff_distance(pos_d, pos_gamma)

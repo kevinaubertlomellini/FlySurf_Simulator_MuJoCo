@@ -130,8 +130,6 @@ shape_gaussian = shape_gaussian_mesh(sides=[0.9, 0.9], amplitude=1.0, center=[0.
 inverted_shape_gaussian = inverted_shape_gaussian_mesh(sides=[0.9, 0.9], amplitude=1.12, center=[0.0, 0.0], sd = [0.775, 0.775], n_points = [rows, cols])
 shape_semi_cylinder = shape_semi_cylinder_arc(sides=0.9, amplitude=1.0, center=[0.0, 0.0], radius=0.32, n_points=[rows, cols])
 
-
-
 indices = []
 for i in range(1,n_points+1):
     for j in range(1,n_points2+1):
@@ -166,20 +164,20 @@ for ii in range(iter+N_horizon+1):
         if (20.0 < ii * delta_factor * T_s) and (35 >= ii * delta_factor * T_s):
             sep2 = 20 / (delta_factor * T_s)
             sep3 = 15 / (delta_factor * T_s)
-            c_0 = np.array(
-                [0.5 * np.cos(2 * np.pi * (ii - sep2) / sep3) - 0.5, 0.5 * np.sin(2 * np.pi * (ii - sep2) / sep3), 0.5])
-            yaw = np.arctan2(c_0[0], c_0[1])
-            R_d = rotation_matrix(0, 0, -2 * yaw)
+            #c_0 = np.array(
+            #    [0.5 * np.cos(2 * np.pi * (ii - sep2) / sep3) - 0.5, 0.5 * np.sin(2 * np.pi * (ii - sep2) / sep3), 0.5])
+            #yaw = np.arctan2(c_0[0], c_0[1])
+            #R_d = rotation_matrix(0, 0, -2 * yaw)
         if 35.0 == ii * delta_factor * T_s:
             factor = 0.065
             shape = inverted_shape_gaussian
         if (35.0 <= ii * delta_factor * T_s) and (50 >= ii * delta_factor * T_s):
             sep2 = 35 / (delta_factor * T_s)
             sep3 = 15 / (delta_factor * T_s)
-            c_0 = np.array(
-                [0.5 * np.cos(2 * np.pi * (ii - sep2) / sep3) - 0.5, 0.5 * np.sin(2 * np.pi * (ii - sep2) / sep3), 0.5])
-            yaw = np.arctan2(c_0[0], c_0[1])
-            R_d = rotation_matrix(0, 0, -yaw)
+            #c_0 = np.array(
+            #    [0.5 * np.cos(2 * np.pi * (ii - sep2) / sep3) - 0.5, 0.5 * np.sin(2 * np.pi * (ii - sep2) / sep3), 0.5])
+            #yaw = np.arctan2(c_0[0], c_0[1])
+            #R_d = rotation_matrix(0, 0, -yaw)
         if 42.5 == ii * delta_factor * T_s:
             shape = shape_semi_cylinder
         '''
@@ -292,7 +290,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             start_time = time.time()
 
             sampler.flysurf.update(points_coord2, points)
-            all_samples = sampler.sampling_v1(fig, ax, points, coordinates=points_coord2, plot=False)
+            all_samples = sampler.sampling_v3_curv(fig, ax, points, coordinates=points_coord2, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
             combined = np.hstack((xe_pos[indices2], 0*sampler.vel[indices2]))
             xe = combined.flatten().reshape(-1, 1)

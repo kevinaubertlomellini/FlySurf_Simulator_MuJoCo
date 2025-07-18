@@ -301,7 +301,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             start_time = time.time()
 
             sampler.flysurf.update(points_coord3, points)
-            all_samples = sampler.sampling_v1(fig, ax, points, coordinates=points_coord3, plot=False)
+            all_samples = sampler.sampling_v3_curv(fig, ax, points, coordinates=points_coord3, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
             combined = np.hstack((xe_pos[indices2], sampler.vel[indices2]))
             combined = np.hstack((xe_pos[indices2], vels[indices,:3]))

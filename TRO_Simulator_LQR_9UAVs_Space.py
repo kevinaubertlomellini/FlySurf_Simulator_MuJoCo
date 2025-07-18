@@ -26,11 +26,11 @@ y_length = 1  # Total length in y direction
 str_stif = 0.1 # Stifness of structural springs
 shear_stif = 0.1 # Stifness of shear springs
 flex_stif = 0.1 # Stifness of flexion springs
-g = 9.81 # Gravity value
+g = 0.0 # Gravity value
 
-#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
+quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
 #quad_positions = [[x, y] for x, y in itertools.product(range(1, rows+1), repeat=2)]
-quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
+#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 
 rows2 = 17 # Number of rows (n-1)/(spacing+1)
@@ -52,10 +52,10 @@ max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
 
 iota_min = 0.5
-iota_max = 1.0
+iota_max = 1.2
 
 # Generate xml simulation  file
-[model, data] = generate_xml2(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, T_s, u_limits2, max_l_str, max_l_shear, max_l_flex, file_path)
+[model, data] = generate_xml_space(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, T_s, u_limits2, max_l_str, max_l_shear, max_l_flex, -g, file_path)
 
 spacing_factor = 1
 [x_actuators, n_actuators] = init_simulator(quad_positions, spacing_factor)
@@ -69,7 +69,7 @@ delta_factor = 20
 delta = delta_factor*T_s
 time_change = 5
 n_tasks = 4
-total_time = 50
+total_time = 40
 time_step_num = round(total_time / T_s)
 
 n_points = int((rows + spacing_factor)/(spacing_factor+1))
@@ -110,11 +110,15 @@ xd_iter = xd.copy()
 
 u_gravity = u_gravity_forces(n_UAVs = n_actuators, mass_points = mass_points, mass_UAVs = mass_quads, rows =rows, cols=cols, g= g)
 
-u_gravity[2]=u_gravity[2]+mass_total/8*g
+u_gravity[2]=u_gravity[2]+mass_total/16*g
 u_gravity[5]=u_gravity[5]+mass_total/8*g
-u_gravity[8]=u_gravity[8]+mass_total/2*g
+u_gravity[8]=u_gravity[8]+mass_total/16*g
 u_gravity[11]=u_gravity[11]+mass_total/8*g
-u_gravity[14]=u_gravity[14]+mass_total/8*g
+u_gravity[14]=u_gravity[14]+mass_total/4*g
+u_gravity[17]=u_gravity[17]+mass_total/8*g
+u_gravity[20]=u_gravity[20]+mass_total/16*g
+u_gravity[23]=u_gravity[23]+mass_total/8*g
+u_gravity[26]=u_gravity[26]+mass_total/16*g
 
 # PATH PLANNING PARAMETERS
 alpha_H = 10.0
@@ -124,13 +128,11 @@ alpha_Hd = 11.0
 shape = np.reshape(np.array([xd[::6],xd[1::6],xd[2::6]]),(3, rows*cols)).reshape(-1,1, order='F')
 R_d = rotation_matrix(0, 0, 0)
 s_d = 1.0
-c_0 = np.array([0.3, 0.0, 0.55])
+c_0 = np.array([0.0, 0.0, 0.5])
 factor= 0.075
 shape_gaussian = shape_gaussian_mesh(sides=[0.9, 0.9], amplitude=1.0, center=[0.0, 0.0], sd = [0.585, 0.585], n_points = [rows, cols])
 inverted_shape_gaussian = inverted_shape_gaussian_mesh(sides=[0.9, 0.9], amplitude=1.12, center=[0.0, 0.0], sd = [0.775, 0.775], n_points = [rows, cols])
 shape_semi_cylinder = shape_semi_cylinder_arc(sides=0.9, amplitude=1.0, center=[0.0, 0.0], radius=0.32, n_points=[rows, cols])
-
-
 
 indices = []
 for i in range(1,n_points+1):
@@ -141,7 +143,7 @@ for i in range(1,n_points+1):
 #print('i',indices)
 indices2 = [i-1 for i in indices]
 
-flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) - 0.004 , num_sample_per_curve=rows2)
+flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.00 , num_sample_per_curve=rows2)
 
 [points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
 
@@ -158,29 +160,26 @@ time_num = 0
 for ii in range(iter+N_horizon+1):
 
     if ii<=iter:
-        if 5 >= ii * delta_factor * T_s:
-            sep = 5 / (delta_factor * T_s)
-            c_0 = np.array([0.0, 0.0, -0.05 + 0.5 * ii / sep])
-        if 10.0 == ii * delta_factor * T_s:
+        if ii==1:
             shape = shape_gaussian
-        if (20.0 < ii * delta_factor * T_s) and (35 >= ii * delta_factor * T_s):
-            sep2 = 20 / (delta_factor * T_s)
+        if (10.0 < ii * delta_factor * T_s) and (25.0 >= ii * delta_factor * T_s):
+            sep2 = 10 / (delta_factor * T_s)
             sep3 = 15 / (delta_factor * T_s)
             c_0 = np.array(
                 [0.5 * np.cos(2 * np.pi * (ii - sep2) / sep3) - 0.5, 0.5 * np.sin(2 * np.pi * (ii - sep2) / sep3), 0.5])
             yaw = np.arctan2(c_0[0], c_0[1])
             R_d = rotation_matrix(0, 0, -2 * yaw)
-        if 35.0 == ii * delta_factor * T_s:
+        if 25.0 == ii * delta_factor * T_s:
             factor = 0.065
             shape = inverted_shape_gaussian
-        if (35.0 < ii * delta_factor * T_s) and (50 >= ii * delta_factor * T_s):
-            sep2 = 35 / (delta_factor * T_s)
+        if (25.0 < ii * delta_factor * T_s) and (40 >= ii * delta_factor * T_s):
+            sep2 = 25 / (delta_factor * T_s)
             sep3 = 15 / (delta_factor * T_s)
             c_0 = np.array(
                 [0.5 * np.cos(2 * np.pi * (ii - sep2) / sep3) - 0.5, 0.5 * np.sin(2 * np.pi * (ii - sep2) / sep3), 0.5])
             yaw = np.arctan2(c_0[0], c_0[1])
             R_d = rotation_matrix(0, 0, -yaw)
-        if 42.5 == ii * delta_factor * T_s:
+        if 32.5 == ii * delta_factor * T_s:
             shape = shape_semi_cylinder
         '''
         if (5 * time_change < ii * delta_factor * model.opt.timestep) and (7.0 * time_change >= ii * delta_factor * T_s):
@@ -229,17 +228,12 @@ for ii in range(iter+N_horizon+1):
     shape_00 = np.mean(shape_3, axis=1, keepdims=True)  # Centroid of c
     shape_save[:, :, ii] = shape_3 - shape_00
 
-
 spring_factor = 25
+# CONTROL PARAMETERS
+Q_vector = [180, 110, 0, 0, 25, 25, 0, 0] # [x and y, z, v_x and v_y, v_z, x_UAV and y_UAV, z_UAV , v_x_quad and v_y_quad, v_z_quad]
+R_vector = 0.75*np.array([100000, 16000]) # [force in x and y, force in z]
 
-Q_vector = np.array([35000, 25000, 0, 0, 0, 0, 0, 0])
-R_vector = [850, 520]
-
-mpc = init_MPC_model7(x,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_vector, R_vector, delta, u_limits, g, xd_sampled, N_horizon, iota_min, iota_max)
-mpc.setup()
-mpc.x0 = x
-mpc.set_initial_guess()
-u_mpc = mpc.make_step(x)
+K = k_dlqr_V2(n_points,n_points2,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,mass_points,mass_quads,x_actuators,x,Q_vector,R_vector,delta)
 
 est_t_save = step_time_save.copy()
 
@@ -275,7 +269,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     mjv_opt = mujoco.MjvOption()
 
     # Allocate a NumPy array to hold the RGB image.
-    output = cv2.VideoWriter("MPC_Mujoco_5UAV.avi", cv2.VideoWriter_fourcc(*'MPEG'), 1/T_s, (view_width, view_height))
+    output = cv2.VideoWriter("LQR_Mujoco_9UAV_Space.avi", cv2.VideoWriter_fourcc(*'MPEG'), 1 / T_s, (view_width, view_height))
 
     while viewer.is_running() and data.time <= total_time:
         step_start = time.time()
@@ -291,13 +285,13 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             points = np.array([states[i] for i in quad_indices2])
 
             if time_num==0:
-                flysurf.update(points_coord3, points)
-                sampler = FlysurfSampler(flysurf, rows, points, points_coord3)
+                flysurf.update(points_coord2, points)
+                sampler = FlysurfSampler(flysurf, rows, points, points_coord2)
 
             start_time = time.time()
 
-            sampler.flysurf.update(points_coord3, points)
-            all_samples = sampler.sampling_v3_curv(fig, ax, points, coordinates=points_coord3, plot=False)
+            sampler.flysurf.update(points_coord2, points)
+            all_samples = sampler.sampling_v3_curv(fig, ax, points, coordinates=points_coord2, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
             combined = np.hstack((xe_pos[indices2], 0*sampler.vel[indices2]))
             xe = combined.flatten().reshape(-1, 1)
@@ -309,23 +303,24 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             start_time = time.time()  # Record start time
 
-            u_mpc = mpc.make_step(xe)
+            xd = np.expand_dims(xd_sampled[:, int(time_num / delta_factor)], axis=1)
 
-            #u_mpc[2::3] = 5*u_mpc[2::3]
+            u_lqr = np.dot(K, (xd - x))
 
             # Enforce actuator limits
             for kv in range(1, n_actuators + 1):
-                u_mpc[3 * kv - 3] = np.clip(u_mpc[3 * kv - 3], u_limits[0, 0], u_limits[0, 1])
-                u_mpc[3 * kv - 2] = np.clip(u_mpc[3 * kv - 2], u_limits[1, 0], u_limits[1, 1])
-                u_mpc[3 * kv - 1] = np.clip(u_mpc[3 * kv - 1], u_limits[2, 0], u_limits[2, 1])
+                u_lqr[3 * kv - 3] = np.clip(u_lqr[3 * kv - 3], u_limits[0, 0], u_limits[0, 1])
+                u_lqr[3 * kv - 2] = np.clip(u_lqr[3 * kv - 2], u_limits[1, 0], u_limits[1, 1])
+                u_lqr[3 * kv - 1] = np.clip(u_lqr[3 * kv - 1], u_limits[2, 0], u_limits[2, 1])
 
-            u = u_mpc + u_gravity  # Compute control inputs for all drones
+            u = u_lqr  # Compute control inputs for all drones
+
             end_time = time.time()  # Record end time
             elapsed_time = end_time - start_time  # Calculate elapsed time
 
             data.ctrl[:] = u.flatten()
             step_time_save[0,int(time_num/delta_factor)] = elapsed_time
-            u_save[:, int(time_num/delta_factor)] = u_mpc.flatten()
+            u_save[:, int(time_num/delta_factor)] = u_lqr.flatten()
             x_save[:, int(time_num/delta_factor)] = x_iter.flatten()
             xe_save[:, int(time_num/delta_factor)] = xe_iter.flatten()
             t_save[int(time_num/delta_factor)] = time_num*T_s
@@ -362,11 +357,12 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         mujoco.mjr_render(viewport, scene, context)
         # Read the pixels from the current view.
         # The viewer object provides the viewport and context needed.
-        mujoco.mjr_readPixels(img, None, viewport, context)
-        
+        rgb_image = np.zeros((view_height, view_width, 3), dtype=np.uint8)
+        mujoco.mjr_readPixels(rgb_image, None, viewport, context)
+        rgb_image = np.flipud(rgb_image)
         # Since OpenGL’s coordinate system is bottom-up, flip the image vertically.
-        img = np.flipud(img)
-        output.write(img)
+        bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+        output.write(bgr_image)
 
     cv2.destroyAllWindows() 
     output.release() 
@@ -376,9 +372,9 @@ t = np.arange(0, (iter+1) * delta, delta)
 
 step = int(time_num/delta_factor)
 
-base_directory = "/home/marhes_1/FLYSOM/Data/Simulation"
+base_directory = "/home/marhes_1/FLYSOM/Data/Simulation_Space"
 experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-experiment_directory = os.path.join(base_directory,f"STP_MPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
+experiment_directory = os.path.join(base_directory,f"LQR_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
 os.makedirs(experiment_directory, exist_ok=True)
 
 plot_positions(t_save[0:step-1], x_save[:,0:step-1], xd_save[:,0:step-1], quad_positions, rows, n_actuators, experiment_directory)

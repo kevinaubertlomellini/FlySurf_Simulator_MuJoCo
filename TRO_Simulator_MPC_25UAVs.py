@@ -150,7 +150,7 @@ for i in range(1,n_points+1):
 #print('i',indices)
 indices2 = [i-1 for i in indices]
 
-flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.001 , num_sample_per_curve=rows2)
+flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.00 , num_sample_per_curve=rows2)
 
 [points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
 
@@ -306,7 +306,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             start_time = time.time()
 
             sampler.flysurf.update(points_coord3, points)
-            all_samples = sampler.sampling_v1(fig, ax, points, coordinates=points_coord3, plot=False)
+            all_samples = sampler.sampling_v3_curv(fig, ax, points, coordinates=points_coord3, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
             combined = np.hstack((xe_pos[indices2], sampler.vel[indices2]))
             combined = np.hstack((xe_pos[indices2], vels[indices,:3]))
@@ -333,7 +333,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
                 u_mpc[3 * kv - 2] = np.clip(u_mpc[3 * kv - 2], u_limits[1, 0], u_limits[1, 1])
                 u_mpc[3 * kv - 1] = np.clip(u_mpc[3 * kv - 1], u_limits[2, 0], u_limits[2, 1])
 
-            u = u_mpc + u_gravity  # Compute control inputs for all drones
+            u = u_mpc + 1.01*u_gravity  # Compute control inputs for all drones
             end_time = time.time()  # Record end time
             elapsed_time = end_time - start_time  # Calculate elapsed time
 

@@ -29,8 +29,8 @@ flex_stif = 0.1 # Stifness of flexion springs
 g = 9.81 # Gravity value
 
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols],[1,int((cols-1)/2)+1],[int((rows-1)/2)+1,1],[rows,int((cols-1)/2)+1],[int((rows-1)/2)+1,cols]]  # UAVs positions in the grid simulator
-#quad_positions = [[x, y] for x, y in itertools.product(range(1, rows+1), repeat=2)]
-quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
+quad_positions = [[x, y] for x, y in itertools.product(range(1, rows+1,4), repeat=2)]
+#quad_positions = [[1, 1],[rows, 1],[1, cols],[int((rows-1)/2)+1,int((cols-1)/2)+1],[rows, cols]]
 #quad_positions = [[1, 1],[rows, 1],[1, cols],[rows, cols]]
 
 rows2 = 17 # Number of rows (n-1)/(spacing+1)
@@ -52,7 +52,7 @@ max_l_flex = 1.41*max_l_str  # Maximum elongation from the natural length of the
 file_path = "FlySurf_Simulator.xml"  # Output xml file name
 
 iota_min = 0.5
-iota_max = 1.0
+iota_max = 1.2
 
 # Generate xml simulation  file
 [model, data] = generate_xml2(rows, cols, x_init, y_init, x_length, y_length, quad_positions, mass_points, mass_quads, str_stif, shear_stif, flex_stif, damp_point, damp_quad, T_s, u_limits2, max_l_str, max_l_shear, max_l_flex, file_path)
@@ -79,7 +79,7 @@ iter = int(time_step_num/delta_factor)
 
 N_horizon = 5
 
-[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save] = init_vectors2(n_actuators, [rows, cols], iter, [n_points, n_points2], 10*N_horizon )
+[u_save, x_save, xd_save, xe_save, step_time_save, x_gamma_save, u_components_save, xd_sampled, t_save, xd_0_save, Rs_d_save, shape_save, shape_sampled_save] = init_vectors4(n_actuators, [rows, cols], iter, [n_points, n_points2], 10*N_horizon )
 
 x = np.zeros((n_points * n_points2 * 6,1))
 for i in range(n_points):
@@ -110,11 +110,21 @@ xd_iter = xd.copy()
 
 u_gravity = u_gravity_forces(n_UAVs = n_actuators, mass_points = mass_points, mass_UAVs = mass_quads, rows =rows, cols=cols, g= g)
 
-u_gravity[2]=u_gravity[2]+mass_total/8*g
-u_gravity[5]=u_gravity[5]+mass_total/8*g
-u_gravity[8]=u_gravity[8]+mass_total/2*g
-u_gravity[11]=u_gravity[11]+mass_total/8*g
-u_gravity[14]=u_gravity[14]+mass_total/8*g
+corner = [1,5,21,25]
+side = [2,3,4,6,11,16,22,23,24,10,15,20]
+
+
+for i in range(1,n_actuators+1):
+    if i in corner:
+        u_gravity[3 * i - 1] = u_gravity[3 * i - 1] + mass_total/64*g
+        print('corner:', i)
+    elif i in side:
+        u_gravity[3 * i - 1] = u_gravity[3 * i - 1] + mass_total / 32 * g
+        print('side:', i)
+    else:
+        u_gravity[3 * i - 1] = u_gravity[3 * i - 1] + mass_total / 16 * g
+        print('other:', i)
+print(u_gravity)
 
 # PATH PLANNING PARAMETERS
 alpha_H = 10.0
@@ -130,8 +140,6 @@ shape_gaussian = shape_gaussian_mesh(sides=[0.9, 0.9], amplitude=1.0, center=[0.
 inverted_shape_gaussian = inverted_shape_gaussian_mesh(sides=[0.9, 0.9], amplitude=1.12, center=[0.0, 0.0], sd = [0.775, 0.775], n_points = [rows, cols])
 shape_semi_cylinder = shape_semi_cylinder_arc(sides=0.9, amplitude=1.0, center=[0.0, 0.0], radius=0.32, n_points=[rows, cols])
 
-
-
 indices = []
 for i in range(1,n_points+1):
     for j in range(1,n_points2+1):
@@ -141,7 +149,7 @@ for i in range(1,n_points+1):
 #print('i',indices)
 indices2 = [i-1 for i in indices]
 
-flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) - 0.004 , num_sample_per_curve=rows2)
+flysurf = CatenaryFlySurf(rows2, cols2, 1/(rows2-1) + 0.00 , num_sample_per_curve=rows2)
 
 [points_coord2, quad_indices2] = points_coord_estimator(quad_positions, rows, cols)
 
@@ -160,7 +168,7 @@ for ii in range(iter+N_horizon+1):
     if ii<=iter:
         if 5 >= ii * delta_factor * T_s:
             sep = 5 / (delta_factor * T_s)
-            c_0 = np.array([0.0, 0.0, -0.05 + 0.5 * ii / sep])
+            c_0 = np.array([0.0, 0.0, 0.05 + 0.45 * ii / sep])
         if 10.0 == ii * delta_factor * T_s:
             shape = shape_gaussian
         if (20.0 < ii * delta_factor * T_s) and (35 >= ii * delta_factor * T_s):
@@ -173,7 +181,7 @@ for ii in range(iter+N_horizon+1):
         if 35.0 == ii * delta_factor * T_s:
             factor = 0.065
             shape = inverted_shape_gaussian
-        if (35.0 < ii * delta_factor * T_s) and (50 >= ii * delta_factor * T_s):
+        if (35.0 <= ii * delta_factor * T_s) and (50 >= ii * delta_factor * T_s):
             sep2 = 35 / (delta_factor * T_s)
             sep3 = 15 / (delta_factor * T_s)
             c_0 = np.array(
@@ -225,25 +233,34 @@ for ii in range(iter+N_horizon+1):
     Rs_d_save[:, :, ii] = s_d * R_d
     xd_sampled[:, ii] = xd.flatten()
 
-    shape_3 = shape.reshape((3, rows * cols), order='F')
+    shape_3 = xd_pos.reshape((3, rows * cols), order='F')
     shape_00 = np.mean(shape_3, axis=1, keepdims=True)  # Centroid of c
+    shape_sampled_save[:, :, ii] = ((shape_3 - shape_00).T)[indices2].T
     shape_save[:, :, ii] = shape_3 - shape_00
 
 
-spring_factor = 25
+spring_factor = 70  # HERE
 
-Q_vector = np.array([35000, 25000, 0, 0, 0, 0, 0, 0])
-R_vector = [850, 520]
+alpha_H = 0.9*np.array([45,45,120])
+alpha_G = 0
+alpha_Rs = 0.95*np.array([900,900,1000])
+Q_0 = 190000 * np.eye(6)
+Q_0[0:2, 0:2] = 55000 * np.eye(2)
+Q_0[3:5, 3:5] = 0 * np.eye(2)
+Q_0[5, 5] = 0
+R_vector =320*np.array([25, 0.8*105])
 
-mpc = init_MPC_model7(x,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_vector, R_vector, delta, u_limits, g, xd_sampled, N_horizon, iota_min, iota_max)
-mpc.setup()
-mpc.x0 = x
-mpc.set_initial_guess()
-u_mpc = mpc.make_step(x)
+mpc_S = init_MPC_general(x,1/spring_factor*str_stif,1/spring_factor*shear_stif,1/spring_factor*flex_stif,damp_point,damp_quad,l0,n_points, n_points2, n_actuators, x_actuators, mass_points*rows*cols/(n_points*n_points2), mass_quads,Q_0, alpha_H , alpha_G, alpha_Rs,  R_vector, delta, u_limits, g, Rs_d_save, shape_sampled_save, xd_0_save, N_horizon, iota_min, iota_max)
+mpc_S.setup()
+mpc_S.x0 = x
+mpc_S.set_initial_guess()
+
+
+u_mpc = mpc_S.make_step(x)
 
 est_t_save = step_time_save.copy()
 
-with mujoco.viewer.launch_passive(model, data) as viewer:
+with (mujoco.viewer.launch_passive(model, data) as viewer):
     if not glfw.init():
         raise Exception("Could not initialize GLFW")
 
@@ -275,7 +292,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     mjv_opt = mujoco.MjvOption()
 
     # Allocate a NumPy array to hold the RGB image.
-    output = cv2.VideoWriter("MPC_Mujoco_5UAV.avi", cv2.VideoWriter_fourcc(*'MPEG'), 1/T_s, (view_width, view_height))
+    output = cv2.VideoWriter("SMPC_Mujoco_25UAV.avi", cv2.VideoWriter_fourcc(*'MPEG'), 1 / T_s, (view_width, view_height))
 
     while viewer.is_running() and data.time <= total_time:
         step_start = time.time()
@@ -299,7 +316,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             sampler.flysurf.update(points_coord3, points)
             all_samples = sampler.sampling_v3_curv(fig, ax, points, coordinates=points_coord3, plot=False)
             xe_pos = sampler.smooth_particle_cloud(all_samples, 1.0, delta)
-            combined = np.hstack((xe_pos[indices2], 0*sampler.vel[indices2]))
+            combined = np.hstack((xe_pos[indices2], sampler.vel[indices2]))
+            combined = np.hstack((xe_pos[indices2], vels[indices,:3]))
             xe = combined.flatten().reshape(-1, 1)
 
             xe_iter = np.hstack((xe_pos, sampler.vel)).flatten().reshape(-1, 1)
@@ -309,17 +327,18 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             start_time = time.time()  # Record start time
 
-            u_mpc = mpc.make_step(xe)
+            u_mpc = mpc_S.make_step(xe)
 
             #u_mpc[2::3] = 5*u_mpc[2::3]
 
             # Enforce actuator limits
-            for kv in range(1, n_actuators + 1):
-                u_mpc[3 * kv - 3] = np.clip(u_mpc[3 * kv - 3], u_limits[0, 0], u_limits[0, 1])
-                u_mpc[3 * kv - 2] = np.clip(u_mpc[3 * kv - 2], u_limits[1, 0], u_limits[1, 1])
-                u_mpc[3 * kv - 1] = np.clip(u_mpc[3 * kv - 1], u_limits[2, 0], u_limits[2, 1])
+            #for kv in range(1, n_actuators + 1):
+            #    u_mpc[3 * kv - 3] = np.clip(u_mpc[3 * kv - 3], u_limits[0, 0], u_limits[0, 1])
+            #    u_mpc[3 * kv - 2] = np.clip(u_mpc[3 * kv - 2], u_limits[1, 0], u_limits[1, 1])
+            #    u_mpc[3 * kv - 1] = np.clip(u_mpc[3 * kv - 1], u_limits[2, 0], u_limits[2, 1])
 
-            u = u_mpc + u_gravity  # Compute control inputs for all drones
+            u = u_mpc + 1*u_gravity  # Compute control inputs for all drones
+
             end_time = time.time()  # Record end time
             elapsed_time = end_time - start_time  # Calculate elapsed time
 
@@ -378,13 +397,13 @@ step = int(time_num/delta_factor)
 
 base_directory = "/home/marhes_1/FLYSOM/Data/Simulation"
 experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-experiment_directory = os.path.join(base_directory,f"STP_MPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
+experiment_directory = os.path.join(base_directory,f"SMPC_{rows}mesh_{spacing_factor}spacing_{n_actuators}UAV_{experiment_timestamp}")
 os.makedirs(experiment_directory, exist_ok=True)
 
 plot_positions(t_save[0:step-1], x_save[:,0:step-1], xd_save[:,0:step-1], quad_positions, rows, n_actuators, experiment_directory)
 plot_forces(t_save[0:step-1], u_save[:,0:step-1], experiment_directory)
 plot_errors4(t_save[0:step-1], step-1, x_save[:,0:step-1], xd_save[:,0:step-1], xe_save[:,0:step-1], x_gamma_save[:,0:step-1], experiment_directory)
-plot_components(t_save[0:step-1], x_save[:,0:step-1], xd_0_save[:,0:step-1], Rs_d_save[:,:,0:step-1], shape_save[:,:,0:step-1], experiment_directory)
+plot_components(t_save[0:step-1], xe_save[:,0:step-1], xd_0_save[:,0:step-1], Rs_d_save[:,:,0:step-1], shape_save[:,:,0:step-1], experiment_directory)
 plot_step_time(step-1, step_time_save[:,0:step], "Step Time Over Iterations- Controller", "controller_step_time_plot.png", experiment_directory)
 plot_step_time(step-1, est_t_save[:,0:step], "Step Time Over Iterations- Estimator", "estimator_step_time_plot.png", experiment_directory)
 

@@ -437,9 +437,9 @@ def k_dlqr_V2(n_points, n_points2, k, k2, k3, c1, c2, l0, mass_points, m_uav, x_
     # Extract the discrete-time system matrices A_d and B_d
     A_d, B_d = sys_discrete.A, sys_discrete.B
 
-    np.savetxt('A_d_matrix.txt', A_d)
-    np.savetxt('B_d_matrix.txt', B_d)
-    np.savetxt('B_matrix.txt', B)
+    #np.savetxt('A_d_matrix.txt', A_d)
+    #np.savetxt('B_d_matrix.txt', B_d)
+    #np.savetxt('B_matrix.txt', B)
 
     Q = np.eye(6 * n_points * n_points2)  # velocity in z
 
@@ -460,7 +460,7 @@ def k_dlqr_V2(n_points, n_points2, k, k2, k3, c1, c2, l0, mass_points, m_uav, x_
         Q[index_actuation - 1, index_actuation - 1] = Q_vector[7]  # velocity in z
     '''
 
-    np.savetxt('Q_matrix.txt', Q)
+    #np.savetxt('Q_matrix.txt', Q)
 
     R = R_vector[1] * np.eye(3 * n_actuators)  # force in z
     '''
@@ -468,7 +468,7 @@ def k_dlqr_V2(n_points, n_points2, k, k2, k3, c1, c2, l0, mass_points, m_uav, x_
         R[3 * yi + 0:3 * yi + 2, 3 * yi + 0:3 * yi + 2] = R_vector[0] * np.eye(2)  # force in x and y
     '''
 
-    np.savetxt('R_matrix.txt', R)
+    #np.savetxt('R_matrix.txt', R)
 
     # LQR Calculation
     P = solve_discrete_are(A_d, B_d, Q, R)
@@ -477,7 +477,7 @@ def k_dlqr_V2(n_points, n_points2, k, k2, k3, c1, c2, l0, mass_points, m_uav, x_
     # Round the gain matrix to 6 decimal places
     K = np.round(K, 6)
 
-    np.savetxt('A_matrix.txt', A)
+    #np.savetxt('A_matrix.txt', A)
 
     return K
 
@@ -1899,8 +1899,17 @@ def init_MPC_general(x2, k, k2, k3, c1, c2, l0,
 
     Q = np.eye(3*n_points*n_points2)  # velocity in z
 
+    Q_H = np.eye(3 * n_points * n_points2)  # velocity in z
 
-    lterm = alpha_H*(e_H).T @ Q @ (e_H) + alpha_G*(a).T @ Q @ (a) + alpha_Rs*(e_Rs).T @ Q @ (e_Rs) + (x_0 - x_ref_0).T @ Q_0 @ (x_0 - x_ref_0) + u.T @ R @ u# Stage cost
+    for i in range(3 * n_points * n_points2):
+        Q_H[i, i] = alpha_H[i % 3]
+
+    Q_Rs = np.eye(3 * n_points * n_points2)  # velocity in z
+
+    for i in range(3 * n_points * n_points2):
+        Q_Rs[i, i] = alpha_Rs[i % 3]
+
+    lterm = (e_H).T @ Q_H @ (e_H) + alpha_G*(a).T @ Q @ (a) + (e_Rs).T @ Q_Rs @ (e_Rs) + (x_0 - x_ref_0).T @ Q_0 @ (x_0 - x_ref_0) + u.T @ R @ u# Stage cost
 
     '''
     Q2 = np.eye(6 * n_points * n_points2)  # velocity in z
